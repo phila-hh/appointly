@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: appointly-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: appointly_user
+      POSTGRES_PASSWORD: appointly_password
+      POSTGRES_DB: appointly
+    ports:
+      - "5433mkdir -p src/lib
+touch src/lib/db.ts:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
