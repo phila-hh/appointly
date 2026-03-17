@@ -8,8 +8,7 @@ services:
       POSTGRES_PASSWORD: appointly_password
       POSTGRES_DB: appointly
     ports:
-      - "5433mkdir -p src/lib
-touch src/lib/db.ts:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
