@@ -1,13 +1,368 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// =============================================================================
+// Appointly database schema
+// =============================================================================
+//
+// This file defines the complete database schema for the Appointly platform.
+// Prisma uses the file to:
+//   1. Generate the TypeScript client (type-safe database queries)
+//   2. Create and run database migrations
+//   3. Provide auto-completion in your editor
+//
+// Schema actions:
+//   - Configuration (generator + datasource)
+//   - Authentication models (NextAuth.js required)
+//   - Business domain models
+//   - Booking and payment models
+//   - Review model
+//
+// Naming conventions:
+//   - Models: PascalCase singulars (User, (User, Business, Booking)
+//   - Fields: camelCase (firstName, createdAt)
+//   - Enums: PascalCase name, SCREAMING_SNAKE_CASE values
+//   - Relations: named descriptively to clarify direction
+//
+// @see https://www.prisma.io/docs/concepts/components/prisma-schema
+// =============================================================================
 
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
 }
+
+// =============================================================================
+// Enums
+// =============================================================================
+// Enums define a fixed allowed values for a field. They map to
+// PostgreSQL ENUM types, enforcing data integrity at the database level.
+// =============================================================================
+
+/// The role a user holds within the platform.
+enum Role {
+  CUSTOMER                      // Can browse businesses, leave reviews
+  BUSINESS_OWNER          // Can manage a business, services, and view bookings
+  ADMIN                           // Platform administrator
+}
+
+/// Category that describes the type of business
+enum BusinessCategory {
+  BARBERSHOP
+  SALON
+  SPA
+  FITNESS
+  DENTAL
+  MEDICAL
+  TUTORING
+  CONSULTING
+  PHOTOGRAPHY
+  AUTOMOTIVE
+  HOME_SERVICES
+  PER_SERVICES
+  OTHER
+}
+
+/// Day of week for business operating hours
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+/// Lifecycle status of booking
+enum BookingStatus {
+  PENDING         // Awaiting confirmation from business owner
+  CONFIRMED         // Business owner accepted the booking
+  CANCELLED         // Cancelled by customer or business owner
+  COMPLETED        // Service was delivered
+  NO_SHOW           // Customer did not show up
+}
+
+/// Status of a payment transaction
+enum PaymentStatus {
+  PENDING              // Payment initiated but not yet processed
+  SUCCEEDED         // Payment completed successfully
+  FAILED                 // Payment attempt failed
+  REFUNDED          // Payment was refunded to the customer
+}
+
+// =============================================================================
+// Authentication Models (NextAuth.js)
+// =============================================================================
+// These models are REQUIRED by NextAuth.js for managing users.
+// OAuth accounts, sessions, and email verification tokens.
+//
+// We extended the base User model with applications specific fields (role, phone)
+// while keeping the NextAuth-required fields intact
+//
+// @see https://authjs.dev/getting-started/adapters/prisma
+// =============================================================================
+
+/// Core User model represents every person on the platform — customers,
+/// business owner, and admins. Extended from the NextAuth base schema.
+model User {
+  id String @id @default(cuid())
+  name String?
+  email String @unique
+  emailVerification DateTime?
+  image String?
+  password String?  // Hashed password for credential-based authentication
+  phone String?
+  role Role @default(CUSTOMER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // -- Relations --
+  accounts Account[]  /// OAuth provider accounts linked to this user
+  sessions Session[]  /// Active login sessions
+  business Business?  /// Business profile (only if role is BUSINESS_OWNEr)
+  bookings Booking[]  /// Appointments booked as a customer
+  reviews Review[]  /// Reviews written as a customer
+
+  @@map("users")
+}
+
+/// OAuth provider linked to a user (e.g., Google, Github)
+/// A single user may have multiple linked accounts.
+/// Required by NextAuth.js — do not modify field names
+model Account {
+  id String @id @default(cuid())
+  userId String
+  type String
+  provider String
+  providerAccountId String
+  refresh_token String? @db.Text
+  access_token String? @db.Text
+  expires_at Int?
+  token_type String?
+  scope String?
+  id_token String? @db.Text
+  session_state String?
+
+  // -- Relations --
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+/// Active user session, Tracks logged-in users and session expiry.
+/// Required by NextAuth.js — do not modify field names
+model Session {
+  id String @id @default(cuid())
+  sessionToken String @unique
+  userId String
+  expires DateTime
+
+  // -- Relations --
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+/// Token used for email-based verification (e.g., magic links, email confirm)
+/// Required by NextAuth.js — do not modify field names
+model VerificationToken {
+  identifier String
+  token String @unique
+  expires DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// =============================================================================
+// Business Domain Models
+// =============================================================================
+// These models represent the core business entities: the business itself,
+// the services it offers, and the operating hours.
+// =============================================================================
+
+/// A business profile on the platform. Each business is owned by exactly
+/// one user (the BUSINESS_OWNER). Contains all public-facing information
+/// customer see when browsing.
+model Business {
+  id String @id @default(cuid())
+  ownerId String @unique  // One user can own only one business
+  name String
+  slug String @unique  // URL-friendly identifier (e.g., "fresh-cuts-barbershop")
+  description String? @db.Text
+  category BusinessCategory
+  phone String?
+  email String?
+  website String?
+  address String?
+  city String?
+  state String?
+  zipCode String?
+  image String?  // Logo or profile image URL
+  coverImage String? // Banner image URL
+  isActive Boolean @default(true) // Soft-delete / hide without removing data
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // -- Relations --
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  services Service[] /// All services offered by this business
+  BusinessHours BusinessHours[] /// Weekly operating schedule
+  bookings Booking[] /// All appointments at this business
+  reviews Review[]   /// Customer reviews for this business
+
+  // -- Indexes --
+  @@index([category])  // Fast filtering by business category
+  @@index([city])  // Fast filtering by city (location-based search)
+  @@index([isActive]) // Fast filtering active businesses only
+  @@map("businesses")
+}
+
+/// A service offered by a business (e.g., "Men's Haircut", "Deep Tissue Massage").
+/// Each service has a price and a duration, which are used to calculate
+/// available time slots and booking costs.
+model Service {
+  id String @id @default(cuid())
+  businessId String
+  name String
+  description String @db.Text
+  price Decimal @db.Decimal(10, 2)  // Supports up to 99,999,999.99
+  duration Int // Duration in minutes (e.g., 30, 60, 90)
+  image String?
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // -- Relations --
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  bookings Booking[] // All bookings for this specific service
+
+  // -- Indexes --
+  @@index([businessId]) // Fast lookup of all services for a business
+  @@index([isActive]) // Fast filtering for active services only
+  @@map("services")
+}
+
+/// Operating hours for a specific day of the week. Each business can have
+/// one entry per day (enforced by the compound unique constraint).
+/// Times are stored as strings in "HH:mm" format (24-hour clock) and are
+/// always interpreted in the business's local timezone
+model BusinessHours {
+  id String @id @default(cuid())
+  businessId String
+  dayOfWeek DayOfWeek
+  openTime String // Opening time in "HH:mm" format (e.g., "09:00")
+  closeTime String // Closing time in "HH:mm" format (e.g., "17:00")
+  isClosed Boolean @default(false) // true = business is closed this day
+
+  // -- Relations --
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // -- Constraints --
+  @@unique([businessId, dayOfWeek]) // One entry per day per business
+
+  // -- Indexes --
+  @@index([businessId]) // Fast lookup of hours for a business
+  @@map("business_hours")
+}
+
+// =============================================================================
+// Booking and Payment Models
+// =============================================================================
+// These models handle the core transitional flow: a customer books a service,
+//  and payment is processed for that booking.
+//
+// Booking lifecycle: PENDING → CONFIRMED → COMPLETED
+//                              ↓
+//                         CANCELLED / NO_SHOW
+// =============================================================================
+
+/// An appointment booked by a customer for a specific service at a business.
+/// The date and time fields are stored separately to simplify scheduling logic
+/// and avoid timezone conversion issues.
+model Booking {
+  id String @id @default(cuid())
+  customerId String
+  businessId String
+  serviceId String
+  date DateTime @db.Date // Date only no time component (e.g., 2025-03-15)
+  startTime String // Start time in "HH:mm" format (e.g., "10:00")
+  endTime String // End time in "HH:mm" format (e.g., "10:30")
+  status BookingStatus @default(PENDING)
+  notes String? @db.Text // Optional message from the customer
+  totalPrice Decimal @db.Decimal(10, 2) // Price at time of booking (snapshot)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // -- Relations --
+  customer User @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  payment Payment? /// Associated payment record (created when payment is initiated)
+  review Review? /// Optional review left after the appointment
+
+  // -- Indexes --
+  @@index([customerId]) // Customer's booking history
+  @@index([businessId]) // Business's booking list
+  @@index([serviceId]) // Booking per service
+  @@index([date]) // Filter bookings by date
+  @@index([status]) // Filter by booking status
+  @@index([businessId, date]) // Business schedule for a specific date (compound)
+  @@index([customerId, status]) // Customer's bookings filtered by status (compound)
+  @@map("bookings")
+}
+
+/// Payment record for a booking. Stores STripe transaction details.
+/// Separated from booking to isolate payment concerns and support
+/// potential future payment provider changes
+model Payment {
+  id String @id @default(cuid())
+  bookingId String @unique // One payment per booking
+  stripePaymentId String? @unique // Stripe PaymentIntent Id (e.g., "pi_abc123")
+  amount Decimal @db.Decimal(10, 2)
+  status PaymentStatus @default(PENDING)
+  createdAt DateTime @default(now())
+   updatedAt DateTime @updatedAt
+
+  // -- Relations --
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  // -- Indexes --
+  @@index([status]) // Filter payments by status (e.g., find all failed payments)
+  @@map("payments")
+}
+
+
+// =============================================================================
+// Review Model
+// =============================================================================
+
+/// A customer review for a business, tied to a specific completed booking.
+/// Linking reviews to booking ensures only customers who actually received
+/// the service can leave feedback. One review per booking is enforced by
+/// the unique constraint on the bookingId
+model Review {
+  id String @id @default(cuid())
+  customerId String
+  businessId String
+  bookingId String @unique // One review per booking
+  rating Int // Integer rating from 1 to 5 (validate at application level)
+  comment String? @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // -- Relations --
+  customer User @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  // -- Indexes --
+  @@index([businessId]) // All reviews for a business
+  @@index([customerId]) // All reviews by a customer
+  @@index([rating]) // Filter or sort by rating
+  @@map("reviews")
+}
+
+
