@@ -40,9 +40,23 @@ declare module "next-auth" {
  * The JWT is an encrypted token stored in a cookie. It holds user data
  * between page loads so we don't query the database on every request.
  */
-declare module "next-auth/jwt" {
+declare module "@auth/core/jwt" {
   interface JWT {
     id: string;
+    role: Role;
+  }
+}
+
+/**
+ * Extend the AdapterUser type to include our custom fields.
+ * This ensures that the user object returned by database adapters
+ * (e.g., Prisma Adapter) includes the "role" field.
+ *
+ * By adding "role" here, we guarantee type safety when interacting
+ * with adapter-level user data throughout the authentication flow.
+ */
+declare module "@auth/core/adapters" {
+  interface AdapterUser {
     role: Role;
   }
 }
