@@ -60,7 +60,7 @@ export const MAIN_NAV_LINKS: NavLink[] = [
 export const DASHBOARD_NAV_LINKS: NavLink[] = [
   { label: "Overview", href: "/dashboard/overview", icon: LayoutDashboard },
   { label: "Bookings", href: "/dashboard/bookings", icon: CalendarDays },
-  { label: "Service", href: "/dashboard/service", icon: Scissors },
+  { label: "Services", href: "/dashboard/services", icon: Scissors },
   { label: "Availability", href: "/dashboard/availability", icon: Clock },
   { label: "Customers", href: "/dashboard/customers", icon: Users },
   { label: "Reviews", href: "/dashboard/reviews", icon: Star },
