@@ -57,7 +57,7 @@ export const MAIN_NAV_LINKS: NavLink[] = [
 ];
 
 /** SIdebar links for the business owner dashboard. */
-export const DASHBOARD_NAV_LINK: NavLink[] = [
+export const DASHBOARD_NAV_LINKS: NavLink[] = [
   { label: "Overview", href: "/dashboard/overview", icon: LayoutDashboard },
   { label: "Bookings", href: "/dashboard/bookings", icon: CalendarDays },
   { label: "Service", href: "/dashboard/service", icon: Scissors },
