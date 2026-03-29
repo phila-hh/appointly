@@ -19,28 +19,25 @@ export const signUpSchema = z
   .object({
     name: z
       .string()
-      .min(2, { message: "Name must be at least 2 characters." })
-      .max(50, { message: "Name must be less than 50 characters." })
+      .min(2, { error: "Name must be at least 2 characters." })
+      .max(50, { error: "Name must be less than 50 characters." })
       .trim(),
     email: z
-      .string()
-      .email({ message: "Please enter a valid email address." })
+      .email({ error: "Please enter a valid email address." })
       .toLowerCase()
       .trim(),
     password: z
       .string()
-      .min(8, { message: "Password must be at least 8 characters." })
-      .max(100, { message: "Password must be less than 100 characters." }),
+      .min(8, { error: "Password must be at least 8 characters." })
+      .max(100, { error: "Password must be less than 100 characters." }),
     confirmPassword: z.string(),
-    role: z.enum(["CUSTOMER", "BUSINESS_OWNER"]),
+    role: z.enum(["CUSTOMER", "BUSINESS_OWNER"], {
+      error: "Please select a role.",
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match.",
+    error: "Passwords do not match.",
     path: ["confirmPassword"],
-  })
-  .refine((data) => data.role !== undefined, {
-    message: "Please select a role.",
-    path: ["role"],
   });
 
 /**
@@ -58,11 +55,10 @@ export type SignUpFormValues = z.infer<typeof signUpSchema>;
  */
 export const signInSchema = z.object({
   email: z
-    .string()
-    .email({ message: "Please enter a valid email address." })
+    .email({ error: "Please enter a valid email address." })
     .toLowerCase()
     .trim(),
-  password: z.string().min(1, { message: "Password is required." }),
+  password: z.string().min(1, { error: "Password is required." }),
 });
 
 /** TypeScript type inferred from the sign-in schema */
