@@ -40,5 +40,8 @@ export const serviceSchema = z.object({
     .max(480, { error: "Duration cannot exceed 8 hours." }),
 });
 
-/** TypeScript type inferred from the service schema. */
-export type ServiceFormValues = z.infer<typeof serviceSchema>;
+/** Parsed and validated values after Zod preprocessing. (safe for backend use). */
+export type ServiceFormValues = z.output<typeof serviceSchema>;
+
+/** Raw input values before Zod parsing (matches form input types). */
+export type ServiceFormInput = z.input<typeof serviceSchema>;

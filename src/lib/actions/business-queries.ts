@@ -11,6 +11,7 @@
 
 import { redirect } from "next/navigation";
 
+import { Service } from "@/generated/prisma/client";
 import db from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 
@@ -46,7 +47,7 @@ export async function requireBusiness() {
  *
  * @returns Array of service records, or empty array if no business
  */
-export async function getBusinessServices() {
+export async function getBusinessServices(): Promise<Service[]> {
   const user = await getCurrentUser();
   if (!user) return [];
 
