@@ -12,6 +12,16 @@
  *
  * Unlike the (main) route group, "dashboard" is part of the URL path.
  * Routes under this layout are at /dashboard/overview, /dashboard/services, etc.
+ *
+ * Responsibilities:
+ *   1. Verify user is authenticated with BUSINESS_OWNER role
+ *   2. Redirect to /dashboard/setup if user has no business yet
+ *   3. Render sidebar (desktop) and header (mobile) navigation
+ *   4. Provide scrollable content area for child pages
+ *
+ * Note: Business existence check is handled by individual pages
+ * that need it, not at the layout level, to avoid redirect loops
+ * with /dashboard/setup page.
  */
 
 import { redirect } from "next/navigation";
@@ -34,7 +44,7 @@ export default async function DashboardLayout({
 }>) {
   const user = await getCurrentUser();
 
-  // Double check authentication (middleware should catch this, defense is depth)
+  // Authentication check (defense in depth — middleware handles this too)
   if (!user || user.role !== "BUSINESS_OWNER") {
     redirect("/sign-in");
   }

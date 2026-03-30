@@ -5,15 +5,21 @@
  * URL: /dashboard/overview
  */
 
+import { requireBusiness } from "@/lib/actions/business-queries";
+
 export const metadata = {
   title: "Overview",
 };
 
-export default function DashboardOverviewPage() {
+export default async function DashboardOverviewPage() {
+  const business = await requireBusiness();
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Welcome back!</h2>
+        <h2 className="text-2xl font-bold tracking-tight">
+          Welcome back, {business.name}
+        </h2>
         <p className="text-muted-foreground">
           Here&apos;s an overview of your business performance.
         </p>

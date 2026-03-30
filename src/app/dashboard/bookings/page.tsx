@@ -5,11 +5,15 @@
  * URL: /dashboard/bookings
  */
 
+import { requireBusiness } from "@/lib/actions/business-queries";
+
 export const metadata = {
   title: "Bookings",
 };
 
-export default function DashboardBookingsPage() {
+export default async function DashboardBookingsPage() {
+  await requireBusiness();
+
   return (
     <div className="space-y-6">
       <div>
