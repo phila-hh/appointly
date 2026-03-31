@@ -17,7 +17,7 @@
  * @see https://www.prisma.io/docs/guides/migrate/seed-database
  */
 
-import { PrismaClient, DayOfWeek } from "@prisma/client";
+import { PrismaClient, DayOfWeek } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hash } from "bcryptjs";
 

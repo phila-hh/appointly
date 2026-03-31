@@ -35,7 +35,7 @@ export type TimeOption = {
  * ```
  */
 export function formatTime24to12(time24: string): string {
-  const [hourStr, minutes] = time24.split(";");
+  const [hourStr, minutes] = time24.split(":");
   const hours = parseInt(hourStr, 10);
 
   if (hours === 0) return `12:${minutes} AM`;
