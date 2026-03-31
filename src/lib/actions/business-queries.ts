@@ -11,7 +11,7 @@
 
 import { redirect } from "next/navigation";
 
-import { Service } from "@/generated/prisma/client";
+import { Service, BusinessHours } from "@/generated/prisma/client";
 import db from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 
@@ -61,5 +61,28 @@ export async function getBusinessServices(): Promise<Service[]> {
   return db.service.findMany({
     where: { businessId: business.id },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+/**
+ * Retrieves the business hours for the current user's business.
+ * Returns all 7 days if they exist, or an empty array if none are set.
+ *
+ * @returns Array of BusinessHours records ordered by day of week
+ */
+export async function getBusinessHours(): Promise<BusinessHours[]> {
+  const user = await getCurrentUser();
+  if (!user) return [];
+
+  const business = await db.business.findUnique({
+    where: { ownerId: user.id },
+    select: { id: true },
+  });
+
+  if (!business) return [];
+
+  return db.businessHours.findMany({
+    where: { businessId: business.id },
+    orderBy: { dayOfWeek: "asc" },
   });
 }
