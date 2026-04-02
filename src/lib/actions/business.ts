@@ -121,7 +121,7 @@ export async function createBusiness(
         address: data.address || null,
         city: data.city || null,
         state: data.state || null,
-        zioCode: data.zipCode || null,
+        zipCode: data.zipCode || null,
       },
     });
 
@@ -159,7 +159,7 @@ export async function updateBusiness(
 
     // Verify ownership
     const business = await db.business.findUnique({
-      where: { businessId },
+      where: { id: businessId },
       select: { ownerId: true },
     });
 

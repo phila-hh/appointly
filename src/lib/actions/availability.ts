@@ -67,11 +67,12 @@ export async function saveAvailability(
 
     // Use a transaction to save all 7 days automatically.
     // If any single day fails, the entire operation is rolled back.
-    await db.transaction(
-      schedule.map((day) => {
-        db.availability.upsert({
+    await db.$transaction(
+      schedule.map((day) =>
+        db.businessHours.upsert({
           where: {
             // The compound unique constraint [businessId, dayOfWeek]
+            // uniquely identifies each row
             businessId_dayOfWeek: {
               businessId: business.id,
               dayOfWeek: day.dayOfWeek,
@@ -91,8 +92,8 @@ export async function saveAvailability(
             closeTime: day.isClosed ? "00:00" : day.closeTime,
             isClosed: day.isClosed,
           },
-        });
-      })
+        })
+      )
     );
 
     revalidatePath("/dashboard/availability");
