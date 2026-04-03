@@ -15,7 +15,7 @@ A full-stack, multi-vendor service booking and business management platform.
 - **Database**: [PostgreSQL](https://www.postgresql.org/)
 - **ORM**: [Prisma](https://www.prisma.io/)
 - **Authentication**: [NextAuth.js v5](https://authjs.dev/)
-- **Payments**: [Stripe](https://stripe.com/)
+- **Payments**: [Chapa](https://chapa.co/)
 - **Email**: [Resend](https://resend.com/)
 - **File Uploads**: [UploadThing](https://uploadthing.com/)
 

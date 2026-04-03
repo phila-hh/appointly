@@ -110,7 +110,7 @@ model User {
   id String @id @default(cuid())
   name String?
   email String @unique
-  emailVerification DateTime?
+  emailVerified DateTime?
   image String?
   password String?  // Hashed password for credential-based authentication
   phone String?
@@ -315,13 +315,13 @@ model Booking {
   @@map("bookings")
 }
 
-/// Payment record for a booking. Stores STripe transaction details.
+/// Payment record for a booking. Stores Chapa transaction details.
 /// Separated from booking to isolate payment concerns and support
 /// potential future payment provider changes
 model Payment {
   id String @id @default(cuid())
   bookingId String @unique // One payment per booking
-  stripePaymentId String? @unique // Stripe PaymentIntent Id (e.g., "pi_abc123")
+  chapaTransactionRef String? @unique // Chapa tx_ref (e.g., "appointly-abc123-1700000000")
   amount Decimal @db.Decimal(10, 2)
   status PaymentStatus @default(PENDING)
   createdAt DateTime @default(now())

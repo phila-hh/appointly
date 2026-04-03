@@ -1,11 +1,11 @@
 /**
  * @file Database Seed Script
- * @description Populate the database with realistic test data for development.
+ * @description Populates the database with realistic test data for development.
  *
  * This script creates:
  *   - 5 users (2 business owners, 3 customers)
  *   - 2 businesses with full profiles
- *   - Multiple services per business
+ *   - Multiple services per business (priced in ETB)
  *   - Weekly operating hours for each business
  *   - Sample bookings in various statuses
  *   - Payment records for bookings
@@ -13,8 +13,6 @@
  *
  * Run with: npm run db:seed
  * Reset and re-seed with: npm run db:reset
- *
- * @see https://www.prisma.io/docs/guides/migrate/seed-database
  */
 
 import { PrismaClient, DayOfWeek } from "@/generated/prisma/client";
@@ -27,18 +25,13 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter });
 
 /**
- * Main seed function. Clears existing data, then creates fresh data.
- * Operates run in a specific order to respect foreign key constraints.
- * Users → Businesses → Services & Hours → Bookings → Payments → Reviews
+ * Main seed function. Clears existing data, then creates fresh test data.
  */
 async function main() {
   console.log("🌱 Starting database seed...\n");
 
   // ---------------------------------------------------------------------------
-  // Step 1: Clean existing data
-  // ---------------------------------------------------------------------------
-  // Delete in reverse order of dependencies to avoid foreign key violations.
-  // Reviews depend on Bookings, Bookings depend on Services, etc
+  // Step 1: Clean existing data (reverse order of dependencies)
   // ---------------------------------------------------------------------------
 
   console.log("🧹 Cleaning existing data...");
@@ -57,10 +50,7 @@ async function main() {
   console.log("✅ Existing data cleared.\n");
 
   // ---------------------------------------------------------------------------
-  // Step 2: Create Users
-  // ---------------------------------------------------------------------------
-  // All passwords are hashed with bcrypt (cost factor 10)
-  // NEVER store plain-text passwords — event in test data
+  // Step 2: Create users
   // ---------------------------------------------------------------------------
 
   console.log("👤 Creating users...");
@@ -72,9 +62,9 @@ async function main() {
       name: "Marcus Johnson",
       email: "marcus@example.com",
       password: hashedPassword,
-      phone: "+1-555-0101",
+      phone: "+251-911-123456",
       role: "BUSINESS_OWNER",
-      emailVerification: new Date(),
+      emailVerified: new Date(),
     },
   });
 
@@ -83,9 +73,9 @@ async function main() {
       name: "Elena Rodriguez",
       email: "elena@example.com",
       password: hashedPassword,
-      phone: "+1-555-0102",
+      phone: "+251-922-654321",
       role: "BUSINESS_OWNER",
-      emailVerification: new Date(),
+      emailVerified: new Date(),
     },
   });
 
@@ -94,9 +84,9 @@ async function main() {
       name: "James Wilson",
       email: "james@example.com",
       password: hashedPassword,
-      phone: "+1-555-0201",
+      phone: "+251-933-111222",
       role: "CUSTOMER",
-      emailVerification: new Date(),
+      emailVerified: new Date(),
     },
   });
 
@@ -105,9 +95,9 @@ async function main() {
       name: "Sarah Chen",
       email: "sarah@example.com",
       password: hashedPassword,
-      phone: "+1-555-0202",
+      phone: "+251-944-333444",
       role: "CUSTOMER",
-      emailVerification: new Date(),
+      emailVerified: new Date(),
     },
   });
 
@@ -116,16 +106,16 @@ async function main() {
       name: "David Kim",
       email: "david@example.com",
       password: hashedPassword,
-      phone: "+1-555-0203",
+      phone: "+251-955-555666",
       role: "CUSTOMER",
-      emailVerification: new Date(),
+      emailVerified: new Date(),
     },
   });
 
   console.log(`✅ Created ${5} users.\n`);
 
   // ---------------------------------------------------------------------------
-  // Step 3: Create Businesses
+  // Step 3: Create businesses
   // ---------------------------------------------------------------------------
 
   console.log("🏪 Creating businesses...");
@@ -138,13 +128,13 @@ async function main() {
       description:
         "Premium barbershop offering classic and modern cuts in a relaxed atmosphere. Walk-ins welcome, appointments preferred. Our experienced barbers specialize in fades, beard grooming, and hot towel shaves.",
       category: "BARBERSHOP",
-      phone: "+1-555-1001",
+      phone: "+251-911-100100",
       email: "info@freshcuts.example.com",
       website: "https://freshcuts.example.com",
-      address: "123 Main Street",
-      city: "Austin",
-      state: "TX",
-      zipCode: "73301",
+      address: "Bole Road, Friendship Building, 3rd Floor",
+      city: "Addis Ababa",
+      state: "Addis Ababa",
+      zipCode: "1000",
       isActive: true,
     },
   });
@@ -157,13 +147,13 @@ async function main() {
       description:
         "A full-service wellness spa dedicated to relaxation and rejuvenation. We offer a range of massage therapies, facials, and body treatments performed by certified therapists in a tranquil setting.",
       category: "SPA",
-      phone: "+1-555-1002",
+      phone: "+251-922-200200",
       email: "hello@serenityspa.example.com",
       website: "https://serenityspa.example.com",
-      address: "456 Oak Avenue, Suite 200",
-      city: "Austin",
-      state: "TX",
-      zipCode: "73301",
+      address: "Kazanchis, Mega Building, Ground Floor",
+      city: "Addis Ababa",
+      state: "Addis Ababa",
+      zipCode: "1000",
       isActive: true,
     },
   });
@@ -171,14 +161,11 @@ async function main() {
   console.log(`✅ Created ${2} businesses.\n`);
 
   // ---------------------------------------------------------------------------
-  // Step 4: Create services
-  // ---------------------------------------------------------------------------
-  // Prices use Prisma's Decimal type. Duration is in minutes.
+  // Step 4: Create services (prices in ETB)
   // ---------------------------------------------------------------------------
 
   console.log("💈 Creating services...");
 
-  // -- Fresh Cuts Barbershop services --
   const barbershopServices = await Promise.all([
     prisma.service.create({
       data: {
@@ -186,7 +173,7 @@ async function main() {
         name: "Classic Haircut",
         description:
           "Traditional haircut with scissors and clippers. Includes wash, cut, and style.",
-        price: 30.0,
+        price: 350,
         duration: 30,
         isActive: true,
       },
@@ -197,7 +184,7 @@ async function main() {
         name: "Fade Haircut",
         description:
           "Precision fade with seamless blending. Low, mid, or high fade options available.",
-        price: 35.0,
+        price: 450,
         duration: 45,
         isActive: true,
       },
@@ -208,7 +195,7 @@ async function main() {
         name: "Beard Trim & Shape",
         description:
           "Professional beard trimming, shaping, and conditioning with hot towel treatment.",
-        price: 20.0,
+        price: 200,
         duration: 20,
         isActive: true,
       },
@@ -219,7 +206,7 @@ async function main() {
         name: "Haircut + Beard Combo",
         description:
           "Full haircut plus beard trim and shape. Our most popular package.",
-        price: 50.0,
+        price: 550,
         duration: 60,
         isActive: true,
       },
@@ -230,14 +217,13 @@ async function main() {
         name: "Hot Towel Shave",
         description:
           "Luxurious straight razor shave with hot towel preparation and aftershave balm.",
-        price: 25.0,
+        price: 300,
         duration: 30,
         isActive: true,
       },
     }),
   ]);
 
-  // -- Serenity Wellness Spa services --
   const spaServices = await Promise.all([
     prisma.service.create({
       data: {
@@ -245,7 +231,7 @@ async function main() {
         name: "Swedish Massage",
         description:
           "Full-body relaxation massage using long, flowing strokes to ease tension and promote circulation.",
-        price: 80.0,
+        price: 2000,
         duration: 60,
         isActive: true,
       },
@@ -256,7 +242,7 @@ async function main() {
         name: "Deep Tissue Massage",
         description:
           "Intensive massage targeting deep muscle layers. Ideal for chronic pain and muscle recovery.",
-        price: 100.0,
+        price: 2500,
         duration: 60,
         isActive: true,
       },
@@ -267,7 +253,7 @@ async function main() {
         name: "Express Facial",
         description:
           "Quick revitalizing facial treatment with cleanse, exfoliation, and hydrating mask.",
-        price: 55.0,
+        price: 1200,
         duration: 30,
         isActive: true,
       },
@@ -277,8 +263,8 @@ async function main() {
         businessId: business2.id,
         name: "Luxury Facial",
         description:
-          "Premium facial with deep cleansing, anti-aging serum, collagen mask, and facial mask.",
-        price: 120.0,
+          "Premium facial with deep cleansing, anti-aging serum, collagen mask, and facial massage.",
+        price: 3500,
         duration: 75,
         isActive: true,
       },
@@ -289,7 +275,7 @@ async function main() {
         name: "Hot Stone Massage",
         description:
           "Therapeutic massage using heated basalt stones to melt away tension and promote deep relaxation.",
-        price: 110.0,
+        price: 2800,
         duration: 90,
         isActive: true,
       },
@@ -303,13 +289,9 @@ async function main() {
   // ---------------------------------------------------------------------------
   // Step 5: Create business hours
   // ---------------------------------------------------------------------------
-  // Both businesses are open Monday-Saturday, closed Sunday.
-  // Hours are stored as "HH:mm" strings in the business's local time.
-  // ---------------------------------------------------------------------------
 
   console.log("🕐 Creating business hours...");
 
-  /** Helper: standard weekdays (Mon-Fri) */
   const weekdays: DayOfWeek[] = [
     "MONDAY",
     "TUESDAY",
@@ -318,7 +300,6 @@ async function main() {
     "FRIDAY",
   ];
 
-  // -- Fresh Cuts: Mon-Fri 9am-7pm, Sat 8am-5pm, Sun closed --
   for (const day of weekdays) {
     await prisma.businessHours.create({
       data: {
@@ -351,7 +332,6 @@ async function main() {
     },
   });
 
-  // -- Serenity Spa: Mon-Fri 10am-8pm, Sat 9am-6pm, Sun closed --
   for (const day of weekdays) {
     await prisma.businessHours.create({
       data: {
@@ -387,21 +367,11 @@ async function main() {
   console.log("✅ Created business hours for both businesses.\n");
 
   // ---------------------------------------------------------------------------
-  // Step 6: Create bookings
-  // ---------------------------------------------------------------------------
-  // Create bookings in various statuses to simulate a realistic state.
-  // Dates use the current month so the data always looks fresh.
+  // Step 6: Create bookings (prices in ETB)
   // ---------------------------------------------------------------------------
 
-  console.log("📅 Create bookings...");
+  console.log("📅 Creating bookings...");
 
-  /**
-   * Helper: builds a Date object for a specific day in the current month.
-   * Falls back to the last day of the month if the given day exceeds it.
-   *
-   * @params day - Day of the month (1-31)
-   * @returns Date object set to the day in the current month
-   */
   const getDateThisMonth = (day: number): Date => {
     const now = new Date();
     const lastDay = new Date(
@@ -413,141 +383,131 @@ async function main() {
     return new Date(now.getFullYear(), now.getMonth(), safeDay);
   };
 
-  // Booking 1: Completed booking at the barbershop
   const booking1 = await prisma.booking.create({
     data: {
       customerId: customer1.id,
       businessId: business1.id,
-      serviceId: barbershopServices[0].id, // Classic Haircut
+      serviceId: barbershopServices[0].id,
       date: getDateThisMonth(5),
       startTime: "10:00",
       endTime: "10:30",
       status: "COMPLETED",
-      totalPrice: 30.0,
+      totalPrice: 350,
       notes: "First time visit. Looking for a clean, professional cut.",
     },
   });
 
-  // Booking 2: Completed booking at the spa
   const booking2 = await prisma.booking.create({
     data: {
       customerId: customer2.id,
       businessId: business2.id,
-      serviceId: spaServices[0].id, // Swedish Massage
+      serviceId: spaServices[0].id,
       date: getDateThisMonth(8),
       startTime: "14:00",
       endTime: "15:00",
       status: "COMPLETED",
-      totalPrice: 80.0,
+      totalPrice: 2000,
     },
   });
 
-  // Booking 3: Confirmed upcoming booking
   const booking3 = await prisma.booking.create({
     data: {
       customerId: customer3.id,
       businessId: business1.id,
-      serviceId: barbershopServices[1].id, // Fade Haircut
+      serviceId: barbershopServices[1].id,
       date: getDateThisMonth(22),
       startTime: "11:00",
       endTime: "11:45",
       status: "CONFIRMED",
-      totalPrice: 35.0,
+      totalPrice: 450,
       notes: "Low fade, please.",
     },
   });
 
-  // Booking 4: pending booking (awaiting confirmation)
   const booking4 = await prisma.booking.create({
     data: {
       customerId: customer1.id,
       businessId: business2.id,
-      serviceId: spaServices[1].id, // Deep tissue massage
+      serviceId: spaServices[1].id,
       date: getDateThisMonth(25),
       startTime: "16:00",
       endTime: "17:00",
       status: "PENDING",
-      totalPrice: 100.0,
+      totalPrice: 2500,
       notes: "Focus on lower back area, please.",
     },
   });
 
-  // Booking 5: Cancelled booking
   const booking5 = await prisma.booking.create({
     data: {
       customerId: customer2.id,
       businessId: business1.id,
-      serviceId: barbershopServices[3].id, // Haircut + Beard Combo
+      serviceId: barbershopServices[3].id,
       date: getDateThisMonth(12),
       startTime: "09:00",
       endTime: "10:00",
       status: "CANCELLED",
-      totalPrice: 50.0,
+      totalPrice: 550,
     },
   });
 
-  // Booking 6: Completed booking (for another review)
   const booking6 = await prisma.booking.create({
     data: {
       customerId: customer3.id,
       businessId: business2.id,
-      serviceId: spaServices[4].id, // Hot Stone Massage
+      serviceId: spaServices[4].id,
       date: getDateThisMonth(10),
-      startTime: "11.00",
+      startTime: "11:00",
       endTime: "12:30",
       status: "COMPLETED",
-      totalPrice: 110.0,
+      totalPrice: 2800,
     },
   });
 
-  console.log("✅ Created 6 bookings.\n");
+  console.log(`✅ Created 6 bookings.\n`);
 
   // ---------------------------------------------------------------------------
-  // Step 7: Create payments
-  // ---------------------------------------------------------------------------
-  // Payments mirror the booking status. Competed bookings have succeeded
-  // payments, cancelled payments have refunded payments, etc.
-  // Stripe IDs are fake placeholders — real ones come from Stripe's API.
+  // Step 7: Create payments (Chapa transaction references)
   // ---------------------------------------------------------------------------
 
-  console.log("💳 Creating Payments...");
+  console.log("💳 Creating payments...");
 
   await prisma.payment.createMany({
     data: [
       {
         bookingId: booking1.id,
-        stripePaymentId: "p1_test_completed_001",
-        amount: 30.0,
+        chapaTransactionRef: "appointly-test-001-1700000001",
+        amount: 350,
         status: "SUCCEEDED",
       },
       {
         bookingId: booking2.id,
-        stripePaymentId: "p1_test_completed_002",
-        amount: 80.0,
+        chapaTransactionRef: "appointly-test-002-1700000002",
+        amount: 2000,
         status: "SUCCEEDED",
       },
       {
         bookingId: booking3.id,
-        stripePaymentId: "pi_test_confirmed_001",
-        amount: 35.0,
+        chapaTransactionRef: "appointly-test-003-1700000003",
+        amount: 450,
         status: "SUCCEEDED",
       },
       {
         bookingId: booking4.id,
-        stripePaymentId: null, // Payment not yet initiated
-        amount: 100.0,
+        chapaTransactionRef: null,
+        amount: 2500,
         status: "PENDING",
       },
       {
         bookingId: booking5.id,
-        stripePaymentId: "pi_test_refunded_001",
-        amount: 50.0,
+        chapaTransactionRef: "appointly-test-005-1700000005",
+        amount: 550,
         status: "REFUNDED",
       },
       {
         bookingId: booking6.id,
-        stripePaymentId: "pi_test_completed_003",
-        amount: 110.0,
+        chapaTransactionRef: "appointly-test-006-1700000006",
+        amount: 2800,
         status: "SUCCEEDED",
       },
     ],
@@ -556,9 +516,7 @@ async function main() {
   console.log("✅ Created 6 payments.\n");
 
   // ---------------------------------------------------------------------------
-  // Step 6: Create reviews
-  // ---------------------------------------------------------------------------
-  // Only completed bookings can have reviews. Ratings range from 1 to 5.
+  // Step 8: Create reviews
   // ---------------------------------------------------------------------------
 
   console.log("⭐ Creating reviews...");
@@ -579,7 +537,7 @@ async function main() {
         bookingId: booking2.id,
         rating: 4,
         comment:
-          "Very relaxing massage. The spa atmosphere is beautiful and calming. Only for 4 stars is the waiting area was a bit crowded. The massage itself was wonderful.",
+          "Very relaxing massage. The spa atmosphere is beautiful and calming. Only reason for 4 stars is the waiting area was a bit crowded. The massage itself was wonderful.",
       },
       {
         customerId: customer3.id,
@@ -601,10 +559,10 @@ async function main() {
   console.log("=".repeat(60));
   console.log("🎉 Database seeded successfully!");
   console.log("=".repeat(60));
-  console.log("\nTest account (all passwords: 'password123'):");
+  console.log("\nTest accounts (all passwords: 'password123'):");
   console.log("  Business owners:");
-  console.log("    - marcus@example.com (Fresh Cuts Barbershop)");
-  console.log("    - elena@example.com (Serenity Wellness Spa)");
+  console.log("    - marcus@example.com  (Fresh Cuts Barbershop)");
+  console.log("    - elena@example.com   (Serenity Wellness Spa)");
   console.log("  Customers:");
   console.log("    - james@example.com");
   console.log("    - sarah@example.com");
@@ -612,7 +570,6 @@ async function main() {
   console.log("\nRun 'npm run db:studio' to browse the data visually.\n");
 }
 
-// Execute the seed function and handle errors
 main()
   .then(async () => {
     await prisma.$disconnect();
@@ -621,5 +578,4 @@ main()
     console.error("❌ Seed failed:", error);
     await prisma.$disconnect();
     process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+  });

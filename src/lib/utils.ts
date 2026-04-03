@@ -75,15 +75,16 @@ export function formatDuration(minutes: number): string {
 }
 
 /**
- * Formats a price value into currency string.
+ * Formats a price value into currency string in Ethiopian Birr.
  *
  * @param price - The price as a number, string, or Decimal
- * @returns Formatted USD string (e.g., "$30.00")
+ * @returns Formatted ETB string (e.g., "ETB 350.00")
  *
  * @example
  * ```ts
- * formatPrice(30)      // → "$30.00"
- * formatPrice("99.5")  // → "$99.50"
+ * formatPrice(350)      // → "ETB 350.00"
+ * formatPrice("2500") // → "ETB 2,500.00"
+ * formatPrice(0)  // → "ETB 0.00"
  * ```
  */
 export function formatPrice(price: number | string): string {
@@ -91,6 +92,7 @@ export function formatPrice(price: number | string): string {
 
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "ETB",
+    minimumFractionDigits: 2,
   }).format(numericPrice);
 }

@@ -84,7 +84,7 @@ export async function signUp(
         email,
         password: hashedPassword,
         role,
-        emailVerification: new Date(), // Mark as verified (Email verification to be implemented in the future)
+        emailVerified: new Date(), // Mark as verified (Email verification to be implemented in the future)
       },
     });
 

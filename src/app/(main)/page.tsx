@@ -279,7 +279,7 @@ const FEATURES = [
     icon: CreditCard,
     title: "Secure Payments",
     description:
-      "Pay for your appointments online with confidence. Powered by Stripe for industry-leading security.",
+      "Pay for all your appointments online with Telebirr, CBE Birr, Amole, or Card. Powered by Chapa for secure transactions.",
   },
   {
     icon: Star,
