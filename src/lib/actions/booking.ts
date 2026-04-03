@@ -90,7 +90,7 @@ export async function createBooking(
 
     // Step 3: Parse the date
     const bookingDate = new Date(date);
-    bookingDate.setHours(0, 0, 0, 0); // Normalize to start of day
+    // bookingDate.setHours(0, 0, 0, 0); // Normalize to start of day
 
     // Step 4: Check for conflicting bookings (CRITICAL — race condition protection)
     // Fetch all non-cancelled bookings for this business on this date

@@ -112,7 +112,7 @@ function formatTo12Hour(time24: string): string {
   if (hours === 0) return `12:${minutes} AM`;
   if (hours === 12) return `12:${minutes} PM`;
   if (hours < 12) return `${hours}:${minutes} AM`;
-  return `${hours}:${minutes} PM`;
+  return `${hours - 12}:${minutes} PM`;
 }
 
 /**

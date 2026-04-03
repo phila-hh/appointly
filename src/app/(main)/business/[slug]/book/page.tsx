@@ -19,8 +19,6 @@ import type { Metadata } from "next";
 import { getBusinessBySlug } from "@/lib/actions/public-queries";
 import { getCurrentUser } from "@/lib/session";
 import { BookingForm } from "@/components/forms/booking-form";
-import { formatPrice, formatDuration } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface BookingPageProps {
   params: Promise<{ slug: string }>;
@@ -85,6 +83,7 @@ export default async function BookingPage({
     name: s.name,
     price: Number(s.price),
     duration: s.duration,
+    description: s.description,
   }));
 
   // Get business hours for the calendar (to disable closed days)
@@ -102,32 +101,6 @@ export default async function BookingPage({
           </h1>
           <p className="mt-1 text-muted-foreground">{business.name}</p>
         </div>
-
-        {/* Selected service summary */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Selected Service</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{serviceData.name}</p>
-                {serviceData.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-1">
-                    {serviceData.description}
-                  </p>
-                )}
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {formatDuration(serviceData.duration)}
-                </p>
-              </div>
-              <p className="text-lg font-semibold">
-                {formatPrice(serviceData.price)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Booking form */}
         <BookingForm
           businessId={business.id}

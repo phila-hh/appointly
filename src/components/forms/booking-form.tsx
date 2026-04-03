@@ -53,7 +53,7 @@ interface BookingFormProps {
   businessId: string;
   businessSlug: string;
   selectedService: ServiceData;
-  allServices: { id: string; name: string; price: number; duration: number }[];
+  allServices: ServiceData[];
   closedDays: string[];
 }
 
@@ -96,7 +96,9 @@ export function BookingForm({
   /**
    * Convert closed days to JS day numbers for calendar disabling.
    */
-  const closedJsDays = closedDays.map((d) => DAY_TO_JS_DAY[d]).filter(Boolean);
+  const closedJsDays = closedDays
+    .map((d) => DAY_TO_JS_DAY[d])
+    .filter((d) => d !== undefined);
 
   /**
    * Calendar date disabling function.
@@ -112,7 +114,7 @@ export function BookingForm({
     if (isBefore(date, today)) return true;
 
     // More than 60 days in the future
-    const maxDate = new Date();
+    const maxDate = startOfDay(new Date());
     maxDate.setDate(maxDate.getDate() + 60);
     if (date > maxDate) return true;
 
@@ -139,7 +141,7 @@ export function BookingForm({
       setSlotsMessage("");
 
       try {
-        const dateStr = selectedDate!.toISOString();
+        const dateStr = format(selectedDate!, "yyyy-MM-dd");
         const slots = await fetchAvailableSlots(
           businessId,
           currentService.id,
@@ -172,7 +174,6 @@ export function BookingForm({
     if (service) {
       setCurrentService({
         ...service,
-        description: null,
       });
       setSelectedSlot(null);
     }
@@ -193,7 +194,7 @@ export function BookingForm({
       const result = await createBooking({
         businessId,
         serviceId: currentService.id,
-        date: selectedDate.toISOString(),
+        date: format(selectedDate, "yyyy-MM-dd"),
         startTime: selectedSlot.startTime,
         endTime: selectedSlot.endTime,
         notes: notes || "",
@@ -203,7 +204,7 @@ export function BookingForm({
         toast.error(result.error);
         // Refresh slots in case the slot was taken
         if (result.error.includes("no longer available")) {
-          const dateStr = selectedDate.toISOString();
+          const dateStr = format(selectedDate, "yyyy-MM-dd");
           const freshSlots = await fetchAvailableSlots(
             businessId,
             currentService.id,
@@ -228,6 +229,32 @@ export function BookingForm({
 
   return (
     <div className="space-y-6">
+      {/* Selected service summary */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Selected Service</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">{currentService.name}</p>
+              {currentService.description && (
+                <p className="text-sm text-muted-foreground line-clamp-1">
+                  {currentService.description}
+                </p>
+              )}
+              <p className="flex items-center gap-1.5 mt-1 text-sm text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" />
+                {formatDuration(currentService.duration)}
+              </p>
+            </div>
+            <p className="text-lg font-semibold">
+              {formatPrice(currentService.price)}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Service selector (if multiple services available) */}
       {allServices.length > 1 && (
         <Card>
@@ -264,13 +291,15 @@ export function BookingForm({
           </CardTitle>
         </CardHeader>
         <CardContent className="flex justify-center">
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={setSelectedDate}
-            disabled={isDateDisabled}
-            className="rounded-md border"
-          />
+          <div className="w-full max-w-sm p-4">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              disabled={isDateDisabled}
+              className="rounded-md border w-full"
+            />
+          </div>
         </CardContent>
       </Card>
 

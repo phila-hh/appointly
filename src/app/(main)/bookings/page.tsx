@@ -7,6 +7,7 @@
 
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { format } from "date-fns";
 
 import { getCurrentUser } from "@/lib/session";
 import { getCustomerBookings } from "@/lib/actions/booking-queries";
@@ -30,7 +31,7 @@ export default async function BookingPage({ searchParams }: BookingPageProps) {
   // Serialize bookings for client component
   const serializedBookings = bookings.map((booking) => ({
     id: booking.id,
-    date: booking.date.toISOString(),
+    date: format(booking.date, "yyyy-MM-dd"),
     startTime: booking.startTime,
     endTime: booking.endTime,
     status: booking.status,

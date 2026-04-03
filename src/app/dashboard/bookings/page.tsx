@@ -9,6 +9,7 @@
  */
 
 import { Suspense } from "react";
+import { format } from "date-fns";
 
 import { requireBusiness } from "@/lib/actions/business-queries";
 import { getBusinessBookings } from "@/lib/actions/booking-queries";
@@ -33,7 +34,7 @@ export default async function DashboardBookingsPage({
   // Serialize bookings for client component
   const serializedBookings = bookings.map((booking) => ({
     id: booking.id,
-    date: booking.date.toISOString(),
+    date: format(booking.date, "yyyy-MM-dd"),
     startTime: booking.startTime,
     endTime: booking.endTime,
     status: booking.status,
