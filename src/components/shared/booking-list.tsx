@@ -44,6 +44,8 @@ interface BookingData {
     duration: number;
   };
   hasReview: boolean;
+  /** Whether the payment has been completed. */
+  isPaid?: boolean;
   /** Customer info — only present in business owner view. */
   customer?: {
     name: string | null;
@@ -205,6 +207,14 @@ export function BookingList({ bookings, userRole }: BookingListProps) {
                         {/* Customer actions */}
                         {userRole === "CUSTOMER" && (
                           <>
+                            {booking.status === "PENDING" &&
+                              !booking.isPaid && (
+                                <Button size="sm" asChild>
+                                  <Link href={`/bookings/${booking.id}/pay`}>
+                                    Pay Now
+                                  </Link>
+                                </Button>
+                              )}
                             {(booking.status === "PENDING" ||
                               booking.status === "CONFIRMED") && (
                               <Button

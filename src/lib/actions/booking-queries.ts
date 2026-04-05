@@ -130,6 +130,9 @@ export async function getCustomerBookings(status?: string) {
       review: {
         select: { id: true },
       },
+      payment: {
+        select: { status: true },
+      },
     },
     orderBy: { createdAt: "desc" },
   });

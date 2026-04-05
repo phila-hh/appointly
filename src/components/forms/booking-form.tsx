@@ -218,7 +218,7 @@ export function BookingForm({
 
       if (result.success) {
         toast.success(result.success);
-        router.push("/bookings");
+        router.push(`/bookings/${result.bookingId}/pay`);
       }
     } catch {
       toast.error("Something went wrong. Please try again.");

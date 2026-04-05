@@ -41,6 +41,7 @@ export default async function BookingPage({ searchParams }: BookingPageProps) {
     business: booking.business,
     service: booking.service,
     hasReview: !!booking.review,
+    isPaid: booking.payment?.status === "SUCCEEDED",
   }));
 
   return (

@@ -8,6 +8,7 @@
  *   - Ownership verification for status update
  *   - Status transition validation (only valid translations allowed)
  *   - Price snapshotting at booking time
+ *   - Automatic Payment record creation with booking
  */
 
 "use server";
@@ -25,29 +26,37 @@ import {
 } from "@/lib/validators/booking";
 import { timeToMinutes, rangesOverlap } from "@/lib/booking-utils";
 
-/** Standard result type for booking actions.  */
-type ActionResult = {
+/** Result type for booking creation — includes bookingId for payment redirect.  */
+type BookingActionResult = {
   success?: string;
   error?: string;
+  bookingId?: string;
 };
 
+/** Standard result type for status updates. */
+interface ActionResult {
+  success?: string;
+  error?: string;
+}
+
 /**
- * Create a new booking for the current customer.
+ * Create a new booking with an associated payment record.
  *
  * Flow:
- *   1. Validate user is authenticated as customer
+ *   1. Validate user is authenticated as CUSTOMER
  *   2. Validate input with Zod schema
  *   3. Verify the service exists and belongs to the business
  *   4. Check for time-slot conflicts (race condition prevention)
  *   5. Snapshot the service price
- *   6. Create booking with PENDING status
+ *   6. Create booking (PENDING) and payment (PENDING) automatically
+ *   7. Return the bookingId for redirection to payment page
  *
  * @param values - Booking form data
- * @returns Object with `success` or `error` messages
+ * @returns Object with `success`, `error`, and optionally `bookingId`
  */
 export async function createBooking(
   values: CreateBookingValues
-): Promise<ActionResult> {
+): Promise<BookingActionResult> {
   try {
     const user = await getCurrentUser();
 
@@ -56,7 +65,7 @@ export async function createBooking(
     }
 
     if (user.role !== "CUSTOMER") {
-      return { error: "Only customers can book an appointment." };
+      return { error: "Only customers can book appointments." };
     }
 
     // Step 1: Validate input
@@ -90,10 +99,9 @@ export async function createBooking(
 
     // Step 3: Parse the date
     const bookingDate = new Date(date);
-    // bookingDate.setHours(0, 0, 0, 0); // Normalize to start of day
+    bookingDate.setHours(0, 0, 0, 0);
 
-    // Step 4: Check for conflicting bookings (CRITICAL — race condition protection)
-    // Fetch all non-cancelled bookings for this business on this date
+    // Step 4: Check for conflicting bookings
     const existingBookings = await db.booking.findMany({
       where: {
         businessId,
@@ -103,7 +111,6 @@ export async function createBooking(
       select: { startTime: true, endTime: true },
     });
 
-    // Check if the requested slot overlaps with any existing booking
     const requestedStart = timeToMinutes(startTime);
     const requestedEnd = timeToMinutes(endTime);
 
@@ -121,31 +128,47 @@ export async function createBooking(
     if (hasConflict) {
       return {
         error:
-          "This time slot is no longer available. Please select a different time.",
+          "The time slot is no longer available. Please select a different time.",
       };
     }
 
-    // Step 5: Create the booking with price snapshot
-    await db.booking.create({
-      data: {
-        customerId: user.id,
-        businessId,
-        serviceId,
-        date: bookingDate,
-        startTime,
-        endTime,
-        status: "PENDING",
-        totalPrice: service.price,
-        notes: notes || null,
-      },
+    // Step 5: Create booking AND payment automatically in a transaction
+    const booking = await db.$transaction(async (tx) => {
+      // Create the booking
+      const newBooking = await tx.booking.create({
+        data: {
+          customerId: user.id,
+          businessId,
+          serviceId,
+          date: bookingDate,
+          startTime,
+          endTime,
+          status: "PENDING",
+          totalPrice: service.price,
+          notes: notes || null,
+        },
+      });
+
+      // Create the associated payment record (PENDING no Chapa ref yet)
+      await tx.payment.create({
+        data: {
+          bookingId: newBooking.id,
+          amount: service.price,
+          status: "PENDING",
+        },
+      });
+
+      return newBooking;
     });
 
-    // Revalidate relevant pages
+    // Revalidate relevant paths
     revalidatePath("/bookings");
     revalidatePath("/dashboard/bookings");
-    revalidatePath(`/business/${businessId}`);
 
-    return { success: "Booking created successfully! Awaiting confirmation." };
+    return {
+      success: "Booking created! Proceed to payment.",
+      bookingId: booking.id,
+    };
   } catch (error) {
     console.error("Create booking error:", error);
     return { error: "Something went wrong. Please try again." };
