@@ -99,7 +99,6 @@ export async function createBooking(
 
     // Step 3: Parse the date
     const bookingDate = new Date(date);
-    bookingDate.setHours(0, 0, 0, 0);
 
     // Step 4: Check for conflicting bookings
     const existingBookings = await db.booking.findMany({
