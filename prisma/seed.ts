@@ -60,7 +60,7 @@ async function main() {
   const businessOwner1 = await prisma.user.create({
     data: {
       name: "Marcus Johnson",
-      email: "marcus@example.com",
+      email: "marcus@gmail.com",
       password: hashedPassword,
       phone: "+251-911-123456",
       role: "BUSINESS_OWNER",
@@ -71,7 +71,7 @@ async function main() {
   const businessOwner2 = await prisma.user.create({
     data: {
       name: "Elena Rodriguez",
-      email: "elena@example.com",
+      email: "elena@gmail.com",
       password: hashedPassword,
       phone: "+251-922-654321",
       role: "BUSINESS_OWNER",
@@ -82,7 +82,7 @@ async function main() {
   const customer1 = await prisma.user.create({
     data: {
       name: "James Wilson",
-      email: "james@example.com",
+      email: "james@gmail.com",
       password: hashedPassword,
       phone: "+251-933-111222",
       role: "CUSTOMER",
@@ -93,7 +93,7 @@ async function main() {
   const customer2 = await prisma.user.create({
     data: {
       name: "Sarah Chen",
-      email: "sarah@example.com",
+      email: "sarah@gmail.com",
       password: hashedPassword,
       phone: "+251-944-333444",
       role: "CUSTOMER",
@@ -104,7 +104,7 @@ async function main() {
   const customer3 = await prisma.user.create({
     data: {
       name: "David Kim",
-      email: "david@example.com",
+      email: "david@gmail.com",
       password: hashedPassword,
       phone: "+251-955-555666",
       role: "CUSTOMER",
@@ -561,12 +561,12 @@ async function main() {
   console.log("=".repeat(60));
   console.log("\nTest accounts (all passwords: 'password123'):");
   console.log("  Business owners:");
-  console.log("    - marcus@example.com  (Fresh Cuts Barbershop)");
-  console.log("    - elena@example.com   (Serenity Wellness Spa)");
+  console.log("    - marcus@gmail.com  (Fresh Cuts Barbershop)");
+  console.log("    - elena@gmail.com   (Serenity Wellness Spa)");
   console.log("  Customers:");
-  console.log("    - james@example.com");
-  console.log("    - sarah@example.com");
-  console.log("    - david@example.com");
+  console.log("    - james@gmail.com");
+  console.log("    - sarah@gmail.com");
+  console.log("    - david@gmail.com");
   console.log("\nRun 'npm run db:studio' to browse the data visually.\n");
 }
 
