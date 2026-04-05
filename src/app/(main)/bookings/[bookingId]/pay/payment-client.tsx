@@ -159,7 +159,7 @@ export function PaymentClient({ booking }: PaymentClientProps) {
                 Telebirr
               </Badge>
               <Badge variant="outline" className="gap-1.5 px-3 py-1.5">
-                <Building2 className="h-3.5 w-3.5" />
+                <Smartphone className="h-3.5 w-3.5" />
                 CBE Birr
               </Badge>
               <Badge variant="outline" className="gap-1.5 px-3 py-1.5">

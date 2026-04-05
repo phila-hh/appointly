@@ -24,7 +24,7 @@
 
 import { NextResponse } from "next/server";
 
-import { verifyPayment } from "@/lib/actions/payment";
+import { verifyPaymentAndRevalidate } from "@/lib/actions/payment";
 
 /**
  * POST /api/webhooks/chapa
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 
     // Verify the transaction via Chapa's API
     // This is the authoritative check — we never trust the webhook payload alone
-    const result = await verifyPayment(txRef);
+    const result = await verifyPaymentAndRevalidate(txRef);
 
     if (result.error) {
       console.error("Webhook verification failed:", result.error);

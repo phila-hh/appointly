@@ -186,10 +186,6 @@ export async function verifyPayment(
         }),
       ]);
 
-      // Revalidate pages showing booking data
-      revalidatePath("/bookings");
-      revalidatePath("/dashboard/bookings");
-
       return { success: true, status: "SUCCEEDED" };
     }
 
@@ -209,4 +205,22 @@ export async function verifyPayment(
     console.error("Verify payment error:", error);
     return { error: "Failed to verify payment. Please try again." };
   }
+}
+
+/**
+ * Wrapper around verifyPayment that includes cache revalidation.
+ * Use this from Server Actions or API routes, not from Server Components.
+ */
+export async function verifyPaymentAndRevalidate(
+  txRef: string
+): Promise<VerifyPaymentResult> {
+  const result = await verifyPayment(txRef);
+
+  // Only revalidate if payment succeeded
+  if (result.success && result.status === "SUCCEEDED") {
+    revalidatePath("/bookings");
+    revalidatePath("/dashboard/bookings");
+  }
+
+  return result;
 }
