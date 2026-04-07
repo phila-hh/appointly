@@ -66,7 +66,7 @@ export async function createService(
       data: {
         businessId: business.id,
         name: data.name,
-        description: data.description || null,
+        description: data.description || "",
         price: data.price,
         duration: data.duration,
       },
@@ -123,7 +123,7 @@ export async function updateService(
       where: { id: serviceId },
       data: {
         name: data.name,
-        description: data.description || null,
+        description: data.description || "",
         price: data.price,
         duration: data.duration,
       },

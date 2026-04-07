@@ -22,7 +22,7 @@ interface BookingPageProps {
 }
 
 export default async function BookingPage({ searchParams }: BookingPageProps) {
-  const user = getCurrentUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
 
   const params = await searchParams;
