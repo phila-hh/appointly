@@ -139,184 +139,200 @@ export function BookingList({ bookings, userRole }: BookingListProps) {
             const bookingDate = new Date(booking.date);
 
             return (
-              <Card key={booking.id}>
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    {/* Left: Booking details */}
-                    <div className="space-y-2">
-                      {/* Service and business names */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-semibold">
-                          {booking.service.name}
-                        </h3>
-                        <Badge
-                          variant="outline"
-                          className={statusConfig.className}
-                        >
-                          {statusConfig.label}
-                        </Badge>
-                      </div>
+              <Link key={booking.id} href={`/bookings/${booking.id}`}>
+                <Card key={booking.id}>
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      {/* Left: Booking details */}
+                      <div className="space-y-2">
+                        {/* Service and business names */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-semibold">
+                            {booking.service.name}
+                          </h3>
+                          <Badge
+                            variant="outline"
+                            className={statusConfig.className}
+                          >
+                            {statusConfig.label}
+                          </Badge>
+                        </div>
 
-                      {/* Business name (for customer view) */}
-                      {userRole === "CUSTOMER" && (
-                        <Link
-                          href={`/business/${booking.business.slug}`}
-                          className="text-sm text-primary hover:underline"
-                        >
-                          {booking.business.name}
-                        </Link>
-                      )}
-
-                      {/* Customer name (for business view) */}
-                      {userRole === "BUSINESS_OWNER" && booking.customer && (
-                        <p className="text-sm text-muted-foreground">
-                          Customer:{" "}
-                          {booking.customer.name ?? booking.customer.email}
-                        </p>
-                      )}
-
-                      {/* Date and time */}
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1.5">
-                          <CalendarDays className="h-4 w-4" />
-                          {format(bookingDate, "EEEE, MMM d, yyyy")}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <Clock className="h-4 w-4" />
-                          {formatTime24to12(booking.startTime)} –{" "}
-                          {formatTime24to12(booking.endTime)}
-                        </span>
-                      </div>
-
-                      {/* Notes */}
-                      {booking.notes && (
-                        <p className="text-sm italic text-muted-foreground">
-                          &ldquo;{booking.notes}&rdquo;
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Right: Price and actions */}
-                    <div className="flex flex-col items-end gap-2">
-                      <p className="text-lg font-semibold">
-                        {formatPrice(booking.totalPrice)}
-                      </p>
-
-                      {/* Action buttons based on role and current status */}
-                      <div className="flex flex-wrap gap-2">
-                        {/* Customer actions */}
+                        {/* Business name (for customer view) */}
                         {userRole === "CUSTOMER" && (
-                          <>
-                            {booking.status === "PENDING" &&
-                              !booking.isPaid && (
-                                <Button size="sm" asChild>
-                                  <Link href={`/bookings/${booking.id}/pay`}>
-                                    Pay Now
-                                  </Link>
-                                </Button>
-                              )}
-                            {(booking.status === "PENDING" ||
-                              booking.status === "CONFIRMED") && (
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                disabled={isLoading}
-                                onClick={() =>
-                                  handleStatusUpdate(booking.id, "CANCELLED")
-                                }
-                              >
-                                {isLoading ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  "Cancel"
-                                )}
-                              </Button>
-                            )}
-                            {booking.status === "COMPLETED" &&
-                              !booking.hasReview && (
-                                <Button size="sm" variant="outline" asChild>
-                                  <Link href={`/bookings/${booking.id}/review`}>
-                                    Leave Review
-                                  </Link>
-                                </Button>
-                              )}
-                          </>
+                          <Link
+                            href={`/business/${booking.business.slug}`}
+                            className="text-sm text-primary hover:underline"
+                          >
+                            {booking.business.name}
+                          </Link>
                         )}
 
-                        {/* Business owner actions */}
-                        {userRole === "BUSINESS_OWNER" && (
-                          <>
-                            {booking.status === "PENDING" && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  disabled={isLoading}
-                                  onClick={() =>
-                                    handleStatusUpdate(booking.id, "CONFIRMED")
-                                  }
-                                >
-                                  {isLoading ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    "Confirm"
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  disabled={isLoading}
-                                  onClick={() =>
-                                    handleStatusUpdate(booking.id, "CANCELLED")
-                                  }
-                                >
-                                  Decline
-                                </Button>
-                              </>
-                            )}
-                            {booking.status === "CONFIRMED" && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  disabled={isLoading}
-                                  onClick={() =>
-                                    handleStatusUpdate(booking.id, "COMPLETED")
-                                  }
-                                >
-                                  {isLoading ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    "Complete"
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  disabled={isLoading}
-                                  onClick={() =>
-                                    handleStatusUpdate(booking.id, "NO_SHOW")
-                                  }
-                                >
-                                  No-Show
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  disabled={isLoading}
-                                  onClick={() =>
-                                    handleStatusUpdate(booking.id, "CANCELLED")
-                                  }
-                                >
-                                  Cancel
-                                </Button>
-                              </>
-                            )}
-                          </>
+                        {/* Customer name (for business view) */}
+                        {userRole === "BUSINESS_OWNER" && booking.customer && (
+                          <p className="text-sm text-muted-foreground">
+                            Customer:{" "}
+                            {booking.customer.name ?? booking.customer.email}
+                          </p>
+                        )}
+
+                        {/* Date and time */}
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <CalendarDays className="h-4 w-4" />
+                            {format(bookingDate, "EEEE, MMM d, yyyy")}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="h-4 w-4" />
+                            {formatTime24to12(booking.startTime)} –{" "}
+                            {formatTime24to12(booking.endTime)}
+                          </span>
+                        </div>
+
+                        {/* Notes */}
+                        {booking.notes && (
+                          <p className="text-sm italic text-muted-foreground">
+                            &ldquo;{booking.notes}&rdquo;
+                          </p>
                         )}
                       </div>
+
+                      {/* Right: Price and actions */}
+                      <div className="flex flex-col items-end gap-2">
+                        <p className="text-lg font-semibold">
+                          {formatPrice(booking.totalPrice)}
+                        </p>
+
+                        {/* Action buttons based on role and current status */}
+                        <div className="flex flex-wrap gap-2">
+                          {/* Customer actions */}
+                          {userRole === "CUSTOMER" && (
+                            <>
+                              {booking.status === "PENDING" &&
+                                !booking.isPaid && (
+                                  <Button size="sm" asChild>
+                                    <Link href={`/bookings/${booking.id}/pay`}>
+                                      Pay Now
+                                    </Link>
+                                  </Button>
+                                )}
+                              {(booking.status === "PENDING" ||
+                                booking.status === "CONFIRMED") && (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  disabled={isLoading}
+                                  onClick={() =>
+                                    handleStatusUpdate(booking.id, "CANCELLED")
+                                  }
+                                >
+                                  {isLoading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    "Cancel"
+                                  )}
+                                </Button>
+                              )}
+                              {booking.status === "COMPLETED" &&
+                                !booking.hasReview && (
+                                  <Button size="sm" variant="outline" asChild>
+                                    <Link
+                                      href={`/bookings/${booking.id}/review`}
+                                    >
+                                      Leave Review
+                                    </Link>
+                                  </Button>
+                                )}
+                            </>
+                          )}
+
+                          {/* Business owner actions */}
+                          {userRole === "BUSINESS_OWNER" && (
+                            <>
+                              {booking.status === "PENDING" && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    disabled={isLoading}
+                                    onClick={() =>
+                                      handleStatusUpdate(
+                                        booking.id,
+                                        "CONFIRMED"
+                                      )
+                                    }
+                                  >
+                                    {isLoading ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      "Confirm"
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    disabled={isLoading}
+                                    onClick={() =>
+                                      handleStatusUpdate(
+                                        booking.id,
+                                        "CANCELLED"
+                                      )
+                                    }
+                                  >
+                                    Decline
+                                  </Button>
+                                </>
+                              )}
+                              {booking.status === "CONFIRMED" && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    disabled={isLoading}
+                                    onClick={() =>
+                                      handleStatusUpdate(
+                                        booking.id,
+                                        "COMPLETED"
+                                      )
+                                    }
+                                  >
+                                    {isLoading ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      "Complete"
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isLoading}
+                                    onClick={() =>
+                                      handleStatusUpdate(booking.id, "NO_SHOW")
+                                    }
+                                  >
+                                    No-Show
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    disabled={isLoading}
+                                    onClick={() =>
+                                      handleStatusUpdate(
+                                        booking.id,
+                                        "CANCELLED"
+                                      )
+                                    }
+                                  >
+                                    Cancel
+                                  </Button>
+                                </>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             );
           })}
         </div>
