@@ -90,6 +90,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 <BusinessCard
                   key={business.id}
                   business={{
+                    id: business.id,
                     slug: business.slug,
                     name: business.name,
                     description: business.description,

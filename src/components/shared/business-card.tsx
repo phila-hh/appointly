@@ -16,6 +16,9 @@
 import Link from "next/link";
 import { MapPin, Scissors, ArrowRight } from "lucide-react";
 
+import { getCurrentUser } from "@/lib/session";
+import { isFavorited } from "@/lib/actions/favorite";
+import { FavoriteButton } from "@/components/shared/favorite-button";
 import {
   Card,
   CardContent,
@@ -33,6 +36,7 @@ import { BUSINESS_CATEGORIES } from "@/constants";
 /** Props accepted by the BusinessCard component. */
 interface BusinessCardProps {
   business: {
+    id: string;
     slug: string;
     name: string;
     description: string | null;
@@ -50,7 +54,11 @@ interface BusinessCardProps {
   };
 }
 
-export function BusinessCard({ business }: BusinessCardProps) {
+export async function BusinessCard({ business }: BusinessCardProps) {
+  // Check if current user has favorited the business
+  const user = await getCurrentUser();
+  const favorited = user ? await isFavorited(business.id) : false;
+
   const averageRating = calculateAverageRating(
     business.reviews.map((r) => r.rating)
   );
@@ -60,7 +68,17 @@ export function BusinessCard({ business }: BusinessCardProps) {
 
   return (
     <Card className="flex flex-col transition-shadow hover:shadow-md">
-      <CardHeader className="pb-3">
+      {/* <CardHeader className="pb-3"> */}
+      <CardHeader className="relative">
+        {user && user.role === "CUSTOMER" && (
+          <div className="absolute right-4 top-4 z-10">
+            <FavoriteButton
+              businessId={business.id}
+              initialFavorited={favorited}
+            />
+          </div>
+        )}
+
         {/* Category badge */}
         <div className="mb-2">
           <Badge variant="secondary" className="text-xs">

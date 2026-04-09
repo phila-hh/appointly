@@ -17,10 +17,11 @@
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import {
-  LayoutDashboard,
   CalendarDays,
-  User as UserIcon,
+  Heart,
+  LayoutDashboard,
   LogOut,
+  User as UserIcon,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -109,6 +110,12 @@ export function UserMenu({ user }: UserMenuProps) {
             </DropdownMenuItem>
           ) : (
             <>
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link href="/favorites">
+                  <Heart className="mr-2 h-4 w-4" />
+                  Favorites
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
                 <Link href="/bookings">
                   <CalendarDays className="mr-2 h-4 w-4" />
