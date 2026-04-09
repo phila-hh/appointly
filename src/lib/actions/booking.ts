@@ -24,7 +24,11 @@ import {
   type CreateBookingValues,
   type UpdateBookingStatusValues,
 } from "@/lib/validators/booking";
-import { timeToMinutes, rangesOverlap } from "@/lib/booking-utils";
+import {
+  timeToMinutes,
+  rangesOverlap,
+  getCancellationDeadline,
+} from "@/lib/booking-utils";
 
 /** Result type for booking creation — includes bookingId for payment redirect.  */
 type BookingActionResult = {
@@ -145,6 +149,9 @@ export async function createBooking(
           status: "PENDING",
           totalPrice: service.price,
           notes: notes || null,
+          isCancellable: true,
+          cancellationDeadline: getCancellationDeadline(bookingDate, startTime),
+          cancellationFee: 0, // Will be configured per business later
         },
       });
 
@@ -262,6 +269,122 @@ export async function updateBookingStatus(
     };
   } catch (error) {
     console.log("Update booking error:", error);
+    return { error: "Something went wrong. Please try again." };
+  }
+}
+
+/**
+ * Reschedules an existing booking to a new date and time.
+ *
+ * Validates:
+ *   - User owns the booking
+ *   - Booking is in a state that allows rescheduling (PENDING or CONFIRMED)
+ *   - New time slot is available
+ *   - New time is in the future
+ *
+ * @param bookingId - The booking to reschedule
+ * @param newDate - New date in ISO format
+ * @param newStartTime - New start time in "HH:mm" format
+ * @param newEndTime - New end time in "HH:mm" format
+ * @returns Object with `success` or `error` message
+ */
+export async function rescheduleBooking(values: {
+  bookingId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}): Promise<ActionResult> {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return { error: "Please sign in." };
+    }
+
+    const { bookingId, date, startTime, endTime } = values;
+
+    // Fetch the booking
+    const booking = await db.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        service: {
+          select: { duration: true },
+        },
+      },
+    });
+
+    if (!booking) {
+      return { error: "Booking not found." };
+    }
+
+    // Verify ownership
+    if (booking.customerId !== user.id) {
+      return {
+        error: "You do not have permission to reschedule this booking.",
+      };
+    }
+
+    // Check booking is in a reschedulable state
+    if (booking.status !== "PENDING" && booking.status !== "CONFIRMED") {
+      return {
+        error: "This booking cannot be rescheduled in its current state.",
+      };
+    }
+
+    const newBookingDate = new Date(date);
+
+    // Check the new time slot is available
+    const existingBookings = await db.booking.findMany({
+      where: {
+        businessId: booking.businessId,
+        date: newBookingDate,
+        status: { in: ["PENDING", "CONFIRMED"] },
+        id: { not: bookingId }, // Exclude the current booking
+      },
+      select: { startTime: true, endTime: true },
+    });
+
+    const requestedStart = timeToMinutes(startTime);
+    const requestedEnd = timeToMinutes(endTime);
+
+    const hasConflict = existingBookings.some((existingBooking) => {
+      const bookedStart = timeToMinutes(existingBooking.startTime);
+      const bookedEnd = timeToMinutes(existingBooking.endTime);
+      return rangesOverlap(
+        requestedStart,
+        requestedEnd,
+        bookedStart,
+        bookedEnd
+      );
+    });
+
+    if (hasConflict) {
+      return {
+        error:
+          "The selected time slot is not available. Please choose a different time.",
+      };
+    }
+
+    // Update the booking
+    await db.booking.update({
+      where: { id: bookingId },
+      data: {
+        date: newBookingDate,
+        startTime,
+        endTime,
+        cancellationDeadline: getCancellationDeadline(
+          newBookingDate,
+          startTime
+        ),
+      },
+    });
+
+    revalidatePath("/bookings");
+    revalidatePath(`/bookings/${bookingId}`);
+
+    return { success: "Booking rescheduled successfully!" };
+  } catch (error) {
+    console.error("Reschedule booking error:", error);
     return { error: "Something went wrong. Please try again." };
   }
 }

@@ -230,3 +230,48 @@ export function getDayOfWeek(date: Date): DayOfWeek {
 
   return dayMap[date.getDay()];
 }
+
+/**
+ * Checks if a booking can be cancelled for free based on the cancellation deadline.
+ *
+ * @param bookingDate - The date of the booking
+ * @param bookingStartTime - The start time in "HH:mm" format
+ * @returns true if cancellation is free (>24h before appointment)
+ */
+export function canCancelForFree(
+  bookingDate: Date,
+  bookingStartTime: string
+): boolean {
+  const [hours, minutes] = bookingStartTime.split(":").map(Number);
+  const appointmentDateTime = new Date(bookingDate);
+  appointmentDateTime.setHours(hours, minutes, 0, 0);
+
+  const now = new Date();
+  const hoursUntilAppointment =
+    (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+  return hoursUntilAppointment > 24;
+}
+
+/**
+ * Calculates the cancellation deadline for a booking.
+ * Deadline is 24 hours before the appointment time.
+ *
+ * @param bookingDate - The date of the booking
+ * @param bookingStartTime - The start time in "HH:mm" format
+ * @returns The cancellation deadline as a Date
+ */
+export function getCancellationDeadline(
+  bookingDate: Date,
+  bookingStartTime: string
+): Date {
+  const [hours, minutes] = bookingStartTime.split(":").map(Number);
+  const appointmentDateTime = new Date(bookingDate);
+  appointmentDateTime.setHours(hours, minutes, 0, 0);
+
+  // Subtract 24 hours
+  const deadline = new Date(
+    appointmentDateTime.getTime() - 24 * 60 * 60 * 1000
+  );
+  return deadline;
+}

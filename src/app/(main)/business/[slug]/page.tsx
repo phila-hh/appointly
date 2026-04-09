@@ -109,7 +109,7 @@ export default async function BusinessDetailPage({
                   {business.address && `${business.address}, `}
                   {business.city}
                   {business.state && `, ${business.state}`}
-                  {business.zipCode && ` ${business.zipCode}`}
+                  {/* {business.zipCode && ` ${business.zipCode}`} */}
                 </span>
               </div>
             )}

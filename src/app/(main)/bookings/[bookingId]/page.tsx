@@ -394,14 +394,27 @@ export default async function BookingDetailPage({
                         </Button>
                       )}
 
-                    {/* Cancel */}
                     {(booking.status === "PENDING" ||
                       booking.status === "CONFIRMED") && (
-                      <Button variant="destructive" className="w-full" asChild>
-                        <Link href={`/bookings?cancel=${booking.id}`}>
-                          Cancel Booking
-                        </Link>
-                      </Button>
+                      <>
+                        {/* Reschedule */}
+                        <Button variant="outline" className="w-full" asChild>
+                          <Link href={`/bookings?reschedule=${booking.id}`}>
+                            Reschedule
+                          </Link>
+                        </Button>
+
+                        {/* Cancel */}
+                        <Button
+                          variant="destructive"
+                          className="w-full"
+                          asChild
+                        >
+                          <Link href={`/bookings?cancel=${booking.id}`}>
+                            Cancel Booking
+                          </Link>
+                        </Button>
+                      </>
                     )}
 
                     {/* Leave review */}

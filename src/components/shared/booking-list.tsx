@@ -16,6 +16,7 @@ import { CalendarDays, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { updateBookingStatus } from "@/lib/actions/booking";
+import { canCancelForFree } from "@/lib/booking-utils";
 import { formatPrice } from "@/lib/utils";
 import { formatTime24to12 } from "@/constants/time";
 import { BOOKING_STATUS_CONFIG } from "@/constants";
@@ -391,7 +392,16 @@ export function BookingList({ bookings, userRole }: BookingListProps) {
         open={cancelDialogOpen}
         onOpenChange={setCancelDialogOpen}
         title="Cancel this appointment?"
-        description="This action cannot be undone. The appointment will be cancelled and you may be charged a cancellation fee if it's within 24 hours of the scheduled time."
+        description={
+          bookingToCancel && bookings.find((b) => b.id === bookingToCancel)
+            ? canCancelForFree(
+                new Date(bookings.find((b) => b.id === bookingToCancel)!.date),
+                bookings.find((b) => b.id === bookingToCancel)!.startTime
+              )
+              ? "This appointment will be cancelled. You are cancelling more than 24 hours in advanced so no fee will be charged."
+              : "Warning. This appointment is within 24 hours. A cancellation fee may apply."
+            : "This action cannot be undone."
+        }
         confirmText="Yes, Cancel Appointment"
         cancelText="Keep Appointment"
         onConfirm={confirmCancel}
