@@ -399,7 +399,7 @@ export default async function BookingDetailPage({
                       <>
                         {/* Reschedule */}
                         <Button variant="outline" className="w-full" asChild>
-                          <Link href={`/bookings?reschedule=${booking.id}`}>
+                          <Link href={`/bookings/reschedule?${booking.id}`}>
                             Reschedule
                           </Link>
                         </Button>

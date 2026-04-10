@@ -111,9 +111,9 @@ export function UserMenu({ user }: UserMenuProps) {
           ) : (
             <>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link href="/favorites">
-                  <Heart className="mr-2 h-4 w-4" />
-                  Favorites
+                <Link href="/my-account">
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  My Account
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
@@ -122,6 +122,13 @@ export function UserMenu({ user }: UserMenuProps) {
                   My Bookings
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link href="/favorites">
+                  <Heart className="mr-2 h-4 w-4" />
+                  Favorites
+                </Link>
+              </DropdownMenuItem>
+
               <DropdownMenuItem asChild className="cursor-pointer">
                 <Link href="/profile">
                   <UserIcon className="mr-2 h-4 w-4" />
