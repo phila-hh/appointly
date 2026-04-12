@@ -168,3 +168,31 @@ export async function getLastCompletedBooking() {
     orderBy: { date: "desc" },
   });
 }
+
+/**
+ * Fetches completed bookings without reviews.
+ *
+ * @returns Array of completed bookings without reviews
+ */
+export async function getBookingsNeedingReview() {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "CUSTOMER") return [];
+
+  return db.booking.findMany({
+    where: { customerId: user.id, status: "COMPLETED", review: null },
+    include: {
+      business: {
+        select: {
+          name: true,
+        },
+      },
+      service: {
+        select: {
+          name: true,
+        },
+      },
+    },
+    orderBy: { date: "desc" },
+    take: 5, // Limit to 5 most recent
+  });
+}

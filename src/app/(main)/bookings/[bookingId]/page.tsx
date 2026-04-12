@@ -97,7 +97,7 @@ export default async function BookingDetailPage({
       <div className="mx-auto max-w-4xl space-y-6">
         {/* Back button */}
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/bookings">
+          <Link href={isOwner ? "/dashboard/bookings" : "/bookings"}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Bookings
           </Link>
@@ -379,7 +379,9 @@ export default async function BookingDetailPage({
               </CardHeader>
               <CardContent className="space-y-2">
                 {/* Add to calendar */}
-                <AddToCalendarButton event={calendarEvent} />
+                {!["COMPLETED", "CANCELLED", "NO_SHOW"].includes(
+                  booking.status
+                ) && <AddToCalendarButton event={calendarEvent} />}
 
                 {/* Customer actions */}
                 {isCustomer && (

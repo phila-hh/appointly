@@ -22,12 +22,14 @@ import {
   getRecentBusinesses,
   getBookingStats,
   getLastCompletedBooking,
+  getBookingsNeedingReview,
 } from "@/lib/actions/customer-dashboard-queries";
 import { Button } from "@/components/ui/button";
 import { UpcomingAppointments } from "@/components/shared/upcoming-appointments";
 import { QuickRebook } from "@/components/shared/quick-rebook";
 import { RecentBusinesses } from "@/components/shared/recent-businesses";
 import { BookingStats } from "@/components/shared/booking-stats";
+import { ReviewPrompts } from "@/components/shared/review-prompts";
 
 export const metadata = {
   title: "My Account",
@@ -45,19 +47,25 @@ export default async function MyAccountPage() {
   }
 
   // Fetch all dashboard data in parallel
-  const [upcomingAppointments, recentBusinesses, stats, lastBooking] =
-    await Promise.all([
-      getUpcomingAppointments(),
-      getRecentBusinesses(),
-      getBookingStats(),
-      getLastCompletedBooking(),
-    ]);
+  const [
+    upcomingAppointments,
+    recentBusinesses,
+    stats,
+    lastBooking,
+    needsReview,
+  ] = await Promise.all([
+    getUpcomingAppointments(),
+    getRecentBusinesses(),
+    getBookingStats(),
+    getLastCompletedBooking(),
+    getBookingsNeedingReview(),
+  ]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-muted/30 to-background">
+    <div className="min-h-screen bg-linear-to-b from-muted/30 to-background">
       <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
         {/* Hero Section */}
-        <div className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 sm:p-8">
+        <div className="relative mb-8 overflow-hidden rounded-2xl bg-linear-to-br from-primary/10 via-primary/5 to-transparent p-6 sm:p-8">
           <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             {/* Welcome message */}
             <div className="space-y-2">
@@ -110,6 +118,18 @@ export default async function MyAccountPage() {
         <div className="mb-8">
           <UpcomingAppointments appointments={upcomingAppointments} />
         </div>
+
+        {/* Bookings not reviewed yet */}
+        {needsReview.length > 0 && (
+          <div className="mb-8">
+            <ReviewPrompts
+              bookings={needsReview.map((booking) => ({
+                ...booking,
+                date: booking.date,
+              }))}
+            />
+          </div>
+        )}
 
         {/* Recent Businesses + Quick Rebook */}
         <div className="grid gap-6 lg:grid-cols-2">
