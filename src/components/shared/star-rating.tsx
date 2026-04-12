@@ -92,21 +92,3 @@ export function StarRating({
     </div>
   );
 }
-
-/**
- * Calculates the average rating from an array of rating values.
- *
- * @param ratings - Array of individual rating numbers (1–5)
- * @returns Average rating rounded to 1 decimal, or 0 if no ratings
- *
- * @example
- * ```ts
- * calculateAverageRating([5, 4, 5, 3]) // → 4.3
- * calculateAverageRating([])            // → 0
- * ```
- */
-export function calculateAverageRating(ratings: number[]): number {
-  if (ratings.length === 0) return 0;
-  const sum = ratings.reduce((acc, rating) => acc + rating, 0);
-  return Math.round((sum / ratings.length) * 10) / 10;
-}

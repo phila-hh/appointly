@@ -17,6 +17,7 @@ import Link from "next/link";
 import { MapPin, Scissors, ArrowRight } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/session";
+import { getAverageRating } from "@/lib/actions/review-queries";
 import { isFavorited } from "@/lib/actions/favorite";
 import { FavoriteButton } from "@/components/shared/favorite-button";
 import {
@@ -27,10 +28,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  StarRating,
-  calculateAverageRating,
-} from "@/components/shared/star-rating";
+import { StarRating } from "@/components/shared/star-rating";
 import { BUSINESS_CATEGORIES } from "@/constants";
 
 /** Props accepted by the BusinessCard component. */
@@ -59,9 +57,7 @@ export async function BusinessCard({ business }: BusinessCardProps) {
   const user = await getCurrentUser();
   const favorited = user ? await isFavorited(business.id) : false;
 
-  const averageRating = calculateAverageRating(
-    business.reviews.map((r) => r.rating)
-  );
+  const averageRating = await getAverageRating(business.id);
 
   const categoryLabel =
     BUSINESS_CATEGORIES[business.category] ?? business.category;
@@ -118,7 +114,7 @@ export async function BusinessCard({ business }: BusinessCardProps) {
         <div className="mt-3 flex items-center justify-between">
           {business._count.reviews > 0 ? (
             <StarRating
-              rating={averageRating}
+              rating={averageRating ?? 0}
               showValue
               reviewCount={business._count.reviews}
               size="sm"
