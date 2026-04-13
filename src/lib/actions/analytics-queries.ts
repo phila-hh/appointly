@@ -540,3 +540,98 @@ export async function getBookingsByDayOfWeek(
     count: dayCounts.get(day) ?? 0,
   }));
 }
+
+/**
+ * Gets comprehensive KPI metrics for a date range.
+ *
+ * Returns all key metrics needed for the dashboard overview.
+ *
+ * @param startDate - Start of date range
+ * @param endDate - End of date range
+ * @returns Object with all KPI metrics
+ */
+export async function getKPIMetrics(
+  startDate: Date,
+  endDate: Date
+): Promise<{
+  revenue: number;
+  bookings: number;
+  customers: number;
+  averageValue: number;
+}> {
+  const [revenue, bookings, customers, averageValue] = await Promise.all([
+    getTotalRevenue(startDate, endDate),
+    getTotalBookings(startDate, endDate),
+    getUniqueCustomers(startDate, endDate),
+    getAverageBookingValue(startDate, endDate),
+  ]);
+
+  return {
+    revenue,
+    bookings,
+    customers,
+    averageValue,
+  };
+}
+
+/**
+ * Gets metrics comparison between current and previous period.
+ *
+ * Calculates percentage changes for all KPIs.
+ *
+ * @param currentStart - Current period start
+ * @param currentEnd - Current period end
+ * @param previousStart - Previous period start
+ * @param previousEnd - Previous period end
+ * @returns Object with current metrics and percentage changes
+ */
+export async function getMetricsComparison(
+  currentStart: Date,
+  currentEnd: Date,
+  previousStart: Date,
+  previousEnd: Date
+): Promise<{
+  current: {
+    revenue: number;
+    bookings: number;
+    customers: number;
+    averageValue: number;
+  };
+  previous: {
+    revenue: number;
+    bookings: number;
+    customers: number;
+    averageValue: number;
+  };
+  trends: {
+    revenue: number;
+    bookings: number;
+    customers: number;
+    averageValue: number;
+  };
+}> {
+  const [current, previous] = await Promise.all([
+    getKPIMetrics(currentStart, currentEnd),
+    getKPIMetrics(previousStart, previousEnd),
+  ]);
+
+  // Calculate percentage changes
+  const calculateChange = (curr: number, prev: number) => {
+    if (prev === 0) return curr > 0 ? 100 : 0;
+    return ((curr - prev) / prev) * 100;
+  };
+
+  return {
+    current,
+    previous,
+    trends: {
+      revenue: calculateChange(current.revenue, previous.revenue),
+      bookings: calculateChange(current.bookings, previous.bookings),
+      customers: calculateChange(current.customers, previous.customers),
+      averageValue: calculateChange(
+        current.averageValue,
+        previous.averageValue
+      ),
+    },
+  };
+}
