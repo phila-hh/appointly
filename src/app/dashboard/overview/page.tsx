@@ -14,6 +14,7 @@
  * URL: /dashboard/overview
  */
 
+import Link from "next/link";
 import { DollarSign, Calendar, Users, TrendingUp } from "lucide-react";
 
 import { requireBusiness } from "@/lib/actions/business-queries";
@@ -51,6 +52,7 @@ import { DayOfWeekChart } from "@/components/charts/day-of-week-chart";
 import { PeakHoursHeatmap } from "@/components/charts/peak-hours-heatmap";
 import { ExportButton } from "@/components/shared/export-button";
 import { formatDateRange } from "@/lib/date-utils";
+import { Button } from "@/components/ui/button";
 
 export const metadata = {
   title: "Analytics Overview",
@@ -110,6 +112,33 @@ export default async function OverviewPage({
     getPeakHoursHeatmap(currentStart, currentEnd),
   ]);
 
+  const hasAnyData =
+    metricsComparison.current.bookings > 0 ||
+    revenueOverTime.length > 0 ||
+    bookingsOverTime.length > 0;
+
+  if (!hasAnyData) {
+    return (
+      <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <Calendar className="mb-4 h-12 w-12 text-muted-foreground" />
+        <h3 className="mb-2 text-lg font-semibold">No data yet</h3>
+        <p className="mb-4 max-w-sm text-sm text-muted-foreground">
+          Start receiving bookings to see your analytics dashboard come to life.
+          Make sure your services are set up and your business is visible to
+          customers.
+        </p>
+        <div className="flex gap-2">
+          <Button asChild>
+            <Link href="/dashboard/services">Manage Services</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/availability">Set Availability</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -168,11 +197,13 @@ export default async function OverviewPage({
             dateRange={formatDateRange(currentStart, currentEnd)}
           />
         </div>
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="md:col-span-2 lg:col-span-2">
             <RevenueChart data={revenueOverTime} />
           </div>
-          <RevenueBreakdownChart data={revenueByService} />
+          <div className="md:col-span-2 lg:col-span-1">
+            <RevenueBreakdownChart data={revenueByService} />
+          </div>
         </div>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Service Performance</h3>
@@ -220,12 +251,14 @@ export default async function OverviewPage({
             dateRange={formatDateRange(currentStart, currentEnd)}
           />
         </div>
-        <div className="grid gap-6 lg:grid-cols-3">
-          <CustomerMetrics
-            newCustomers={customerBreakdown.newCustomers}
-            returningCustomers={customerBreakdown.returningCustomers}
-          />
-          <div className="lg:col-span-2">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="md:col-span-2 lg:col-span-1">
+            <CustomerMetrics
+              newCustomers={customerBreakdown.newCustomers}
+              returningCustomers={customerBreakdown.returningCustomers}
+            />
+          </div>
+          <div className="md:col-span-2 lg:col-span-2">
             <TopCustomersList customers={topCustomers} />
           </div>
         </div>
@@ -235,7 +268,7 @@ export default async function OverviewPage({
       <div className="space-y-6">
         <h3 className="text-lg font-semibold">Peak Hours Analysis</h3>
         <PeakHoursHeatmap data={heatmap} />
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
           <PeakHoursChart data={peakHours} />
           <DayOfWeekChart data={dayOfWeek} />
         </div>
