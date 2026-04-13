@@ -723,3 +723,62 @@ export async function getTopCustomers(
     .sort((a, b) => b.totalSpent - a.totalSpent)
     .slice(0, limit);
 }
+
+/**
+ * Gets peak hours heatmap data (bookings by day AND hour).
+ *
+ * @param startDate - Start of date range
+ * @param endDate - End of date range
+ * @returns Array of { dayOfWeek, hour, count }
+ */
+export async function getPeakHoursHeatmap(
+  startDate: Date,
+  endDate: Date
+): Promise<Array<{ dayOfWeek: string; hour: number; count: number }>> {
+  const businessId = await getBusinessId();
+  if (!businessId) return [];
+
+  const bookings = await db.booking.findMany({
+    where: {
+      businessId,
+      date: {
+        gte: startOfDay(startDate),
+        lte: endOfDay(endDate),
+      },
+    },
+    select: {
+      date: true,
+      startTime: true,
+    },
+  });
+
+  // Group by day of week AND hour
+  const heatmapData = new Map<string, number>();
+  const dayNames = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+
+  bookings.forEach((booking) => {
+    const dayOfWeek = dayNames[booking.date.getDay()];
+    const hour = parseInt(booking.startTime.split(":")[0]);
+    const key = `${dayOfWeek}-${hour}`;
+
+    heatmapData.set(key, (heatmapData.get(key) ?? 0) + 1);
+  });
+
+  // Convert to array format
+  return Array.from(heatmapData.entries()).map(([key, count]) => {
+    const [dayOfWeek, hourStr] = key.split("-");
+    return {
+      dayOfWeek,
+      hour: parseInt(hourStr),
+      count,
+    };
+  });
+}
