@@ -128,3 +128,47 @@
     @apply font-sans;
   }
 }
+
+/* Print styles for analytics dashboard */
+@media print {
+  /* Hide navigation, buttons, and interactive elements */
+  nav,
+  button,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Ensure charts print properly */
+  .recharts-wrapper {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Page breaks */
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+  }
+
+  /* Remove shadows and backgrounds for cleaner print */
+  .shadow,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg {
+    box-shadow: none !important;
+  }
+
+  /* Ensure dark mode doesn't affect print */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Make cards have borders for clarity */
+  .border {
+    border: 1px solid #e5e7eb !important;
+  }
+}

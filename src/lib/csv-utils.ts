@@ -4,7 +4,10 @@
  */
 
 /** A generic CSV safe record — values must be serializable to string  */
-type CSVRecord = Record<string, string | number | boolean | null | undefined>;
+export type CSVRecord = Record<
+  string,
+  string | number | boolean | null | undefined
+>;
 
 /**
  * Converts an array of objects to CSV format.
@@ -78,7 +81,7 @@ interface ServicesItem {
 }
 
 /** Shape of a customers data item */
-interface CustomersItem {
+export interface CustomersItem {
   name: string | null;
   email: string;
   bookings: number;
@@ -87,7 +90,7 @@ interface CustomersItem {
 }
 
 /** Union of all possible analytics data item shapes */
-type AnalyticsDataItem =
+export type AnalyticsDataItem =
   | RevenueItem
   | BookingsItem
   | ServicesItem
