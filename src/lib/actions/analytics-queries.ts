@@ -635,3 +635,91 @@ export async function getMetricsComparison(
     },
   };
 }
+
+/**
+ * Gets top customers by total spending.
+ *
+ * @param startDate - Start of date range
+ * @param endDate - End of date range
+ * @param limit - Number of customers to return
+ * @returns Array of top customers with spending and booking count
+ */
+export async function getTopCustomers(
+  startDate: Date,
+  endDate: Date,
+  limit: number = 10
+): Promise<
+  Array<{
+    id: string;
+    name: string | null;
+    email: string;
+    image: string | null;
+    totalSpent: number;
+    bookingCount: number;
+  }>
+> {
+  const businessId = await getBusinessId();
+  if (!businessId) return [];
+
+  // Get all completed bookings with customer info
+  const bookings = await db.booking.findMany({
+    where: {
+      businessId,
+      status: "COMPLETED",
+      date: {
+        gte: startOfDay(startDate),
+        lte: endOfDay(endDate),
+      },
+      payment: {
+        status: "SUCCEEDED",
+      },
+    },
+    include: {
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+        },
+      },
+    },
+  });
+
+  // Group by customer
+  const customerMap = new Map<
+    string,
+    {
+      id: string;
+      name: string | null;
+      email: string;
+      image: string | null;
+      totalSpent: number;
+      bookingCount: number;
+    }
+  >();
+
+  bookings.forEach((booking) => {
+    const customerId = booking.customer.id;
+    const existing = customerMap.get(customerId);
+
+    if (existing) {
+      existing.totalSpent += Number(booking.totalPrice);
+      existing.bookingCount += 1;
+    } else {
+      customerMap.set(customerId, {
+        id: booking.customer.id,
+        name: booking.customer.name,
+        email: booking.customer.email,
+        image: booking.customer.image,
+        totalSpent: Number(booking.totalPrice),
+        bookingCount: 1,
+      });
+    }
+  });
+
+  // Sort by total spent and return top N
+  return Array.from(customerMap.values())
+    .sort((a, b) => b.totalSpent - a.totalSpent)
+    .slice(0, limit);
+}
