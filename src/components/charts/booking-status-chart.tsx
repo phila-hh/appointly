@@ -1,12 +1,8 @@
 /**
- * @file Revenue Breakdown Chart Component
- * @description Pie chart showing revenue distribution by service category.
+ * @file Booking Status Chart Component
+ * @description Donut chart showing distribution of booking statuses.
  *
- * Features:
- *   - Donut-style pie chart
- *   - Percentage labels
- *   - Legend with revenue amounts
- *   - Interactive hover states
+ * Shows: Completed, Confirmed, Pending, Cancelled, No-Show
  */
 
 "use client";
@@ -22,38 +18,40 @@ import {
 } from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatPrice } from "@/lib/utils";
+import { BOOKING_STATUS_CONFIG } from "@/constants";
 
-interface RevenueBreakdownChartProps {
-  data: Array<{
-    serviceName: string;
-    revenue: number;
-  }>;
+interface BookingStatusChartProps {
+  data: Record<string, number>;
   title?: string;
 }
 
-const COLORS = [
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#f59e0b",
-  "#10b981",
-  "#6366f1",
-  "#14b8a6",
-  "#f97316",
-];
-
-interface FormattedDataEntry {
+interface ChartDataEntry {
   name: string;
   value: number;
-  percentage: string;
+  status: string;
 }
 
-export function RevenueBreakdownChart({
+const STATUS_COLORS: Record<string, string> = {
+  COMPLETED: "#10b981",
+  CONFIRMED: "#3b82f6",
+  PENDING: "#f59e0b",
+  CANCELLED: "#ef4444",
+  NO_SHOW: "#6b7280",
+};
+
+export function BookingStatusChart({
   data,
-  title = "Revenue Distribution",
-}: RevenueBreakdownChartProps) {
-  if (data.length === 0) {
+  title = "Booking Status Distribution",
+}: BookingStatusChartProps) {
+  const chartData: ChartDataEntry[] = Object.entries(data)
+    .filter(([, count]) => count > 0)
+    .map(([status, count]) => ({
+      name: BOOKING_STATUS_CONFIG[status]?.label ?? status,
+      value: count,
+      status,
+    }));
+
+  if (chartData.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -61,20 +59,14 @@ export function RevenueBreakdownChart({
         </CardHeader>
         <CardContent className="flex h-[300px] items-center justify-center">
           <p className="text-sm text-muted-foreground">
-            No revenue data for this period
+            No booking data for this period
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  const totalRevenue = data.reduce((sum, item) => sum + item.revenue, 0);
-
-  const formattedData: FormattedDataEntry[] = data.map((item) => ({
-    name: item.serviceName,
-    value: item.revenue,
-    percentage: ((item.revenue / totalRevenue) * 100).toFixed(1),
-  }));
+  const totalBookings = chartData.reduce((sum, item) => sum + item.value, 0);
 
   const renderLabel = (props: PieLabelRenderProps) => {
     const RADIAN = Math.PI / 180;
@@ -97,7 +89,7 @@ export function RevenueBreakdownChart({
         dominantBaseline="central"
         className="text-xs"
       >
-        {formattedData[index].percentage}%
+        {chartData[index].value}
       </text>
     );
   };
@@ -111,19 +103,19 @@ export function RevenueBreakdownChart({
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
             <Pie
-              data={formattedData}
+              data={chartData}
               cx="50%"
               cy="50%"
               innerRadius={60}
-              outerRadius={100}
+              outerRadius={90}
               paddingAngle={2}
               dataKey="value"
               label={renderLabel}
             >
-              {formattedData.map((_entry, index) => (
+              {chartData.map((entry) => (
                 <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[index % COLORS.length]}
+                  key={entry.status}
+                  fill={STATUS_COLORS[entry.status] ?? "#6b7280"}
                 />
               ))}
             </Pie>
@@ -131,16 +123,17 @@ export function RevenueBreakdownChart({
               content={({ active, payload }) => {
                 if (!active || !payload || !payload.length) return null;
 
-                const item = payload[0].payload as FormattedDataEntry;
+                const item = payload[0].payload as ChartDataEntry;
+                const percentage = ((item.value / totalBookings) * 100).toFixed(
+                  1
+                );
 
                 return (
                   <div className="rounded-lg border bg-background p-3 shadow-lg">
                     <p className="font-medium">{item.name}</p>
-                    <p className="text-lg font-bold text-primary">
-                      {formatPrice(item.value)}
-                    </p>
+                    <p className="text-lg font-bold">{item.value} bookings</p>
                     <p className="text-sm text-muted-foreground">
-                      {item.percentage}% of total
+                      {percentage}% of total
                     </p>
                   </div>
                 );
@@ -150,10 +143,10 @@ export function RevenueBreakdownChart({
               verticalAlign="bottom"
               height={36}
               formatter={(value: string, entry) => {
-                const payload = entry.payload as unknown as FormattedDataEntry;
+                const payload = entry.payload as unknown as ChartDataEntry;
                 return (
                   <span className="text-xs">
-                    {value} ({formatPrice(payload.value)})
+                    {value} ({payload.value})
                   </span>
                 );
               }}
