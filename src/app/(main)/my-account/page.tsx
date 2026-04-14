@@ -96,7 +96,7 @@ export default async function MyAccountPage() {
                 </Link>
               </Button>
               <Button variant="outline" asChild className="flex-1 sm:flex-none">
-                <Link href="/profiles">
+                <Link href="/profile">
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </Link>
