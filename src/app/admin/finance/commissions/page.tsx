@@ -77,23 +77,32 @@ export default async function AdminCommissionsPage({
                   </p>
                 </td>
                 <td className="px-4 py-3">{row.business.name}</td>
-                <td className="px-4 py-3">ETB {Number(row.grossAmount).toLocaleString()}</td>
+                <td className="px-4 py-3">
+                  ETB {Number(row.grossAmount).toLocaleString()}
+                </td>
                 <td className="px-4 py-3">
                   ETB {Number(row.commissionAmount).toLocaleString()}
                   <p className="text-xs text-muted-foreground">
                     {(row.commissionRate * 100).toFixed(1)}%
                   </p>
                 </td>
-                <td className="px-4 py-3">ETB {Number(row.netAmount).toLocaleString()}</td>
+                <td className="px-4 py-3">
+                  ETB {Number(row.netAmount).toLocaleString()}
+                </td>
                 <td className="px-4 py-3">{row.status}</td>
                 <td className="px-4 py-3 text-xs">
-                  {row.payout ? `${row.payout.period} • ${row.payout.status}` : "-"}
+                  {row.payout
+                    ? `${row.payout.period} • ${row.payout.status}`
+                    : "-"}
                 </td>
               </tr>
             ))}
             {commissions.length === 0 && (
               <tr>
-                <td className="px-4 py-6 text-sm text-muted-foreground" colSpan={7}>
+                <td
+                  className="px-4 py-6 text-sm text-muted-foreground"
+                  colSpan={7}
+                >
                   No commissions found for the current filters.
                 </td>
               </tr>

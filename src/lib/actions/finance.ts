@@ -46,7 +46,9 @@ export async function generatePayoutsForPeriod(
     });
 
     if (pending.length === 0) {
-      return { error: "No pending commissions available for payout generation." };
+      return {
+        error: "No pending commissions available for payout generation.",
+      };
     }
 
     const grouped = new Map<string, typeof pending>();
@@ -62,7 +64,10 @@ export async function generatePayoutsForPeriod(
           commissions.reduce((sum, item) => sum + Number(item.grossAmount), 0)
         );
         const commissionTotal = roundCurrency(
-          commissions.reduce((sum, item) => sum + Number(item.commissionAmount), 0)
+          commissions.reduce(
+            (sum, item) => sum + Number(item.commissionAmount),
+            0
+          )
         );
         const amount = roundCurrency(
           commissions.reduce((sum, item) => sum + Number(item.netAmount), 0)
@@ -219,7 +224,9 @@ export async function markPayoutFailed(
     revalidatePath(`/admin/finance/payouts/${payoutId}`);
     revalidatePath("/admin/audit-log");
     revalidatePath("/dashboard/earnings");
-    return { success: "Payout marked failed and commissions returned to pending." };
+    return {
+      success: "Payout marked failed and commissions returned to pending.",
+    };
   } catch (error) {
     console.error("markPayoutFailed error:", error);
     return { error: "Failed to mark payout as failed." };

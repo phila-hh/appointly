@@ -57,7 +57,8 @@ export function AdminHeader({ user }: AdminHeaderProps) {
               {ADMIN_NAV_LINKS.map((link) => {
                 const Icon = link.icon;
                 const isActive =
-                  pathname === link.href || pathname.startsWith(`${link.href}/`);
+                  pathname === link.href ||
+                  pathname.startsWith(`${link.href}/`);
 
                 return (
                   <Link
@@ -106,7 +107,9 @@ export function AdminHeader({ user }: AdminHeaderProps) {
 
       <div className="flex-1">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-semibold">{currentPage?.label ?? "Admin"}</h1>
+          <h1 className="text-lg font-semibold">
+            {currentPage?.label ?? "Admin"}
+          </h1>
           <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
             ADMIN
           </span>

@@ -74,14 +74,6 @@ export async function seedBookings(
   // Generate a comprehensive list of bookings
   const bookingDefs: BookingDef[] = [];
 
-  const statuses: BookingStatus[] = [
-    "COMPLETED",
-    "CONFIRMED",
-    "PENDING",
-    "CANCELLED",
-    "NO_SHOW",
-  ];
-
   const startTimes = [
     "08:00",
     "08:30",

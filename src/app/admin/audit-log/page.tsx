@@ -34,8 +34,12 @@ export default async function AdminAuditLogPage() {
                   {format(log.createdAt, "PPP p")}
                 </td>
                 <td className="px-4 py-3">
-                  <p className="font-medium">{log.admin.name ?? "Unknown Admin"}</p>
-                  <p className="text-xs text-muted-foreground">{log.admin.email}</p>
+                  <p className="font-medium">
+                    {log.admin.name ?? "Unknown Admin"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {log.admin.email}
+                  </p>
                 </td>
                 <td className="px-4 py-3 font-medium">{log.action}</td>
                 <td className="px-4 py-3 text-xs">

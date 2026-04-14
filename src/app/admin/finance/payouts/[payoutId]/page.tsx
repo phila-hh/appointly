@@ -36,7 +36,9 @@ export default async function AdminPayoutDetailPage({
         </div>
         <div className="rounded-lg border p-4">
           <p className="text-sm text-muted-foreground">Gross Total</p>
-          <p className="mt-1 font-semibold">ETB {Number(payout.grossTotal).toLocaleString()}</p>
+          <p className="mt-1 font-semibold">
+            ETB {Number(payout.grossTotal).toLocaleString()}
+          </p>
         </div>
         <div className="rounded-lg border p-4">
           <p className="text-sm text-muted-foreground">Commission Total</p>
@@ -46,7 +48,9 @@ export default async function AdminPayoutDetailPage({
         </div>
         <div className="rounded-lg border p-4">
           <p className="text-sm text-muted-foreground">Net Amount</p>
-          <p className="mt-1 font-semibold">ETB {Number(payout.amount).toLocaleString()}</p>
+          <p className="mt-1 font-semibold">
+            ETB {Number(payout.amount).toLocaleString()}
+          </p>
         </div>
       </div>
 
@@ -94,7 +98,8 @@ export default async function AdminPayoutDetailPage({
 
         {payout.paidAt && (
           <p className="mt-3 text-xs text-muted-foreground">
-            Paid at {format(payout.paidAt, "PPP p")} • Ref: {payout.reference ?? "-"}
+            Paid at {format(payout.paidAt, "PPP p")} • Ref:{" "}
+            {payout.reference ?? "-"}
           </p>
         )}
       </div>
@@ -121,11 +126,15 @@ export default async function AdminPayoutDetailPage({
                 <td className="px-4 py-3 text-xs">
                   {format(row.booking.date, "PPP")} {row.booking.startTime}
                 </td>
-                <td className="px-4 py-3">ETB {Number(row.grossAmount).toLocaleString()}</td>
+                <td className="px-4 py-3">
+                  ETB {Number(row.grossAmount).toLocaleString()}
+                </td>
                 <td className="px-4 py-3">
                   ETB {Number(row.commissionAmount).toLocaleString()}
                 </td>
-                <td className="px-4 py-3">ETB {Number(row.netAmount).toLocaleString()}</td>
+                <td className="px-4 py-3">
+                  ETB {Number(row.netAmount).toLocaleString()}
+                </td>
                 <td className="px-4 py-3">{row.status}</td>
               </tr>
             ))}

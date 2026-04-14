@@ -25,7 +25,7 @@ export default async function AdminOverviewPage() {
     { label: "Total Bookings", value: totalBookings.toLocaleString() },
     {
       label: "Gross Revenue",
-      value: `ETB ${(Number(totalRevenue._sum.amount ?? 0)).toLocaleString()}`,
+      value: `ETB ${Number(totalRevenue._sum.amount ?? 0).toLocaleString()}`,
     },
   ];
 

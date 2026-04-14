@@ -105,11 +105,15 @@ export default async function AdminPayoutsPage({
                   </p>
                 </td>
                 <td className="px-4 py-3">{payout.period}</td>
-                <td className="px-4 py-3">ETB {Number(payout.grossTotal).toLocaleString()}</td>
+                <td className="px-4 py-3">
+                  ETB {Number(payout.grossTotal).toLocaleString()}
+                </td>
                 <td className="px-4 py-3">
                   ETB {Number(payout.commissionTotal).toLocaleString()}
                 </td>
-                <td className="px-4 py-3">ETB {Number(payout.amount).toLocaleString()}</td>
+                <td className="px-4 py-3">
+                  ETB {Number(payout.amount).toLocaleString()}
+                </td>
                 <td className="px-4 py-3">{payout.status}</td>
                 <td className="px-4 py-3">{payout._count.commissions}</td>
                 <td className="px-4 py-3">
@@ -124,7 +128,10 @@ export default async function AdminPayoutsPage({
             ))}
             {payouts.length === 0 && (
               <tr>
-                <td className="px-4 py-6 text-sm text-muted-foreground" colSpan={8}>
+                <td
+                  className="px-4 py-6 text-sm text-muted-foreground"
+                  colSpan={8}
+                >
                   No payouts found for the current filters.
                 </td>
               </tr>

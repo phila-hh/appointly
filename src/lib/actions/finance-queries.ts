@@ -55,7 +55,9 @@ export async function getCommissions(filters?: {
     },
     include: {
       business: { select: { id: true, name: true } },
-      booking: { select: { id: true, date: true, startTime: true, status: true } },
+      booking: {
+        select: { id: true, date: true, startTime: true, status: true },
+      },
       payout: { select: { id: true, period: true, status: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -75,7 +77,11 @@ export async function getPayouts(filters?: {
     },
     include: {
       business: {
-        select: { id: true, name: true, owner: { select: { email: true, name: true } } },
+        select: {
+          id: true,
+          name: true,
+          owner: { select: { email: true, name: true } },
+        },
       },
       _count: {
         select: { commissions: true },
@@ -130,8 +136,12 @@ export async function getBusinessEarnings() {
     db.commission.findMany({
       where: { businessId: business.id },
       include: {
-        booking: { select: { id: true, date: true, startTime: true, status: true } },
-        payout: { select: { id: true, period: true, status: true, paidAt: true } },
+        booking: {
+          select: { id: true, date: true, startTime: true, status: true },
+        },
+        payout: {
+          select: { id: true, period: true, status: true, paidAt: true },
+        },
       },
       orderBy: { createdAt: "desc" },
       take: 100,

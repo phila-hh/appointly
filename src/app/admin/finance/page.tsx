@@ -58,7 +58,9 @@ export default async function AdminFinanceOverviewPage() {
             {overview.payoutStats.map((stat) => (
               <p key={stat.status}>
                 {stat.status}:{" "}
-                <span className="font-medium">{stat._count.id.toLocaleString()}</span>
+                <span className="font-medium">
+                  {stat._count.id.toLocaleString()}
+                </span>
               </p>
             ))}
             {overview.payoutStats.length === 0 && (
@@ -94,7 +96,10 @@ export default async function AdminFinanceOverviewPage() {
         </div>
         <div className="divide-y">
           {recentPayouts.slice(0, 8).map((payout) => (
-            <div key={payout.id} className="flex items-center justify-between p-4 text-sm">
+            <div
+              key={payout.id}
+              className="flex items-center justify-between p-4 text-sm"
+            >
               <div>
                 <p className="font-medium">{payout.business.name}</p>
                 <p className="text-xs text-muted-foreground">
@@ -102,7 +107,9 @@ export default async function AdminFinanceOverviewPage() {
                 </p>
               </div>
               <div className="text-right">
-                <p className="font-medium">ETB {Number(payout.amount).toLocaleString()}</p>
+                <p className="font-medium">
+                  ETB {Number(payout.amount).toLocaleString()}
+                </p>
                 <Link
                   href={`/admin/finance/payouts/${payout.id}`}
                   className="text-xs text-primary hover:underline"
@@ -113,7 +120,9 @@ export default async function AdminFinanceOverviewPage() {
             </div>
           ))}
           {recentPayouts.length === 0 && (
-            <div className="p-4 text-sm text-muted-foreground">No payouts generated yet.</div>
+            <div className="p-4 text-sm text-muted-foreground">
+              No payouts generated yet.
+            </div>
           )}
         </div>
       </div>

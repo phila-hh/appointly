@@ -81,9 +81,7 @@ export async function seedReviews(bookings: SeededBooking[]): Promise<void> {
   const completedBookings = bookings.filter((b) => b.status === "COMPLETED");
 
   // Review about 70% of completed bookings (realistic — not everyone leaves a review)
-  const bookingsToReview = completedBookings.filter(
-    (_, i) => i % 10 < 7
-  );
+  const bookingsToReview = completedBookings.filter((_, i) => i % 10 < 7);
 
   let count = 0;
 
@@ -107,8 +105,7 @@ export async function seedReviews(bookings: SeededBooking[]): Promise<void> {
     else ratingGroup = 1;
 
     const ratingData = REVIEW_COMMENTS.find((r) => r.rating === ratingGroup)!;
-    const comment =
-      ratingData.comments[i % ratingData.comments.length];
+    const comment = ratingData.comments[i % ratingData.comments.length];
 
     try {
       await prisma.review.create({

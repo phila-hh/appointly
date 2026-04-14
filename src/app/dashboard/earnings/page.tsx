@@ -31,7 +31,9 @@ export default async function DashboardEarningsPage() {
         </div>
         <div className="rounded-lg border bg-card p-4">
           <p className="text-sm text-muted-foreground">Paid Out</p>
-          <p className="mt-2 text-2xl font-semibold">ETB {paidOut.toLocaleString()}</p>
+          <p className="mt-2 text-2xl font-semibold">
+            ETB {paidOut.toLocaleString()}
+          </p>
         </div>
         <div className="rounded-lg border bg-card p-4">
           <p className="text-sm text-muted-foreground">Lifetime Gross</p>
@@ -63,17 +65,24 @@ export default async function DashboardEarningsPage() {
                   {format(row.booking.date, "PPP")} {row.booking.startTime}
                 </td>
                 <td className="px-4 py-3 text-xs">{row.booking.id}</td>
-                <td className="px-4 py-3">ETB {Number(row.grossAmount).toLocaleString()}</td>
+                <td className="px-4 py-3">
+                  ETB {Number(row.grossAmount).toLocaleString()}
+                </td>
                 <td className="px-4 py-3">
                   ETB {Number(row.commissionAmount).toLocaleString()}
                 </td>
-                <td className="px-4 py-3">ETB {Number(row.netAmount).toLocaleString()}</td>
+                <td className="px-4 py-3">
+                  ETB {Number(row.netAmount).toLocaleString()}
+                </td>
                 <td className="px-4 py-3">{row.status}</td>
               </tr>
             ))}
             {data.commissions.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-sm text-muted-foreground">
+                <td
+                  colSpan={6}
+                  className="px-4 py-6 text-sm text-muted-foreground"
+                >
                   No commissions available yet.
                 </td>
               </tr>
@@ -101,7 +110,9 @@ export default async function DashboardEarningsPage() {
             {data.payouts.map((payout) => (
               <tr key={payout.id} className="border-t">
                 <td className="px-4 py-3">{payout.period}</td>
-                <td className="px-4 py-3">ETB {Number(payout.amount).toLocaleString()}</td>
+                <td className="px-4 py-3">
+                  ETB {Number(payout.amount).toLocaleString()}
+                </td>
                 <td className="px-4 py-3">
                   ETB {Number(payout.commissionTotal).toLocaleString()}
                 </td>
@@ -114,7 +125,10 @@ export default async function DashboardEarningsPage() {
             ))}
             {data.payouts.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-sm text-muted-foreground">
+                <td
+                  colSpan={6}
+                  className="px-4 py-6 text-sm text-muted-foreground"
+                >
                   No payout history yet.
                 </td>
               </tr>
