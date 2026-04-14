@@ -91,7 +91,9 @@ export function BookingList({ bookings, userRole }: BookingListProps) {
       params.set("status", status);
     }
     const queryString = params.toString();
-    router.push(queryString ? `?${queryString}` : ".", { scroll: false });
+    router.push(queryString ? `?${queryString}` : "/bookings", {
+      scroll: false,
+    });
   }
 
   /** Update a booking's status with loading state and feedback. */

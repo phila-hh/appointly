@@ -31,6 +31,45 @@ type VerifyPaymentResult = {
   status?: string;
 };
 
+function roundCurrency(value: number): number {
+  return Number(value.toFixed(2));
+}
+
+async function ensureCommissionForBooking(bookingId: string) {
+  const booking = await db.booking.findUnique({
+    where: { id: bookingId },
+    select: {
+      id: true,
+      businessId: true,
+      totalPrice: true,
+      commission: { select: { id: true } },
+    },
+  });
+
+  if (!booking || booking.commission) return;
+
+  const settings = await db.platformSettings.findFirst({
+    select: { defaultCommissionRate: true },
+  });
+
+  const commissionRate = settings?.defaultCommissionRate ?? 0.1;
+  const grossAmount = Number(booking.totalPrice);
+  const commissionAmount = roundCurrency(grossAmount * commissionRate);
+  const netAmount = roundCurrency(grossAmount - commissionAmount);
+
+  await db.commission.create({
+    data: {
+      bookingId: booking.id,
+      businessId: booking.businessId,
+      grossAmount,
+      commissionRate,
+      commissionAmount,
+      netAmount,
+      status: "PENDING",
+    },
+  });
+}
+
 /**
  * Initializes a Chapa payment session for a booking.
  *
@@ -162,6 +201,7 @@ export async function verifyPayment(
 
     // If already processed, return the current status (idempotent)
     if (payment.status === "SUCCEEDED") {
+      await ensureCommissionForBooking(payment.booking.id);
       return { success: true, status: "SUCCEEDED" };
     }
 
@@ -185,6 +225,8 @@ export async function verifyPayment(
           data: { status: "CONFIRMED" },
         }),
       ]);
+
+      await ensureCommissionForBooking(payment.booking.id);
 
       return { success: true, status: "SUCCEEDED" };
     }

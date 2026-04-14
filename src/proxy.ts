@@ -43,6 +43,8 @@ export default auth((req) => {
 
   /** Business owner dashboard — requires BUSINESS_OWNER role */
   const isDashboardPage = nextUrl.pathname.startsWith("/dashboard");
+  /** Admin panel routes — requires ADMIN role */
+  const isAdminPage = nextUrl.pathname.startsWith("/admin");
 
   /** Customer-only pages — requires any authenticated user */
   const isProtectedCustomerPage =
@@ -53,9 +55,13 @@ export default auth((req) => {
   // Rule 1: Redirect authenticated users away from auth pages
   // -----------------------------------------------------------------------
   if (isAuthPage && isLoggedIn) {
-    // Send business owners to their dashboard, customers to browse
+    // Send users to their role-specific landing page
     const redirectPath =
-      userRole === "BUSINESS_OWNER" ? "/dashboard/overview" : "/browse";
+      userRole === "ADMIN"
+        ? "/admin/overview"
+        : userRole === "BUSINESS_OWNER"
+          ? "/dashboard/overview"
+          : "/browse";
     return NextResponse.redirect(new URL(redirectPath, nextUrl));
   }
 
@@ -74,14 +80,26 @@ export default auth((req) => {
   }
 
   // -----------------------------------------------------------------------
-  // Rule 3: Protect customer pages — must be authenticated
+  // Rule 3: Protect admin routes — must be an ADMIN
+  // -----------------------------------------------------------------------
+  if (isAdminPage) {
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL("/sign-in", nextUrl));
+    }
+    if (userRole !== "ADMIN") {
+      return NextResponse.redirect(new URL("/", nextUrl));
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Rule 4: Protect customer pages — must be authenticated
   // -----------------------------------------------------------------------
   if (isProtectedCustomerPage && !isLoggedIn) {
     return NextResponse.redirect(new URL("/sign-in", nextUrl));
   }
 
   // -----------------------------------------------------------------------
-  // Rule 4: All other routes — allow access
+  // Rule 5: All other routes — allow access
   // -----------------------------------------------------------------------
   return NextResponse.next();
 });

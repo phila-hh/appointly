@@ -92,6 +92,21 @@ enum PaymentStatus {
   REFUNDED          // Payment was refunded to the customer
 }
 
+/// Lifecycle state of a commission line item.
+enum CommissionStatus {
+  PENDING
+  INCLUDED_IN_PAYOUT
+  PAID_OUT
+}
+
+/// Lifecycle state of a payout batch.
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
 // =============================================================================
 // Authentication Models (NextAuth.js)
 // =============================================================================
@@ -125,8 +140,40 @@ model User {
   bookings Booking[]  /// Appointments booked as a customer
   reviews Review[]  /// Reviews written as a customer
   favorites Favorite[] /// Favorite businesses
+  adminAuditLogs AdminAuditLog[] /// Admin actions performed by this user
 
   @@map("users")
+}
+
+/// Platform-wide settings managed by admins.
+model PlatformSettings {
+  id String @id @default(cuid())
+  defaultCommissionRate Float @default(0.10)
+  payoutSchedule String @default("MONTHLY")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_settings")
+}
+
+/// Immutable log of sensitive admin actions for accountability.
+model AdminAuditLog {
+  id String @id @default(cuid())
+  adminId String
+  action String
+  entityType String
+  entityId String?
+  metadata Json?
+  createdAt DateTime @default(now())
+
+  // -- Relations --
+  admin User @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  // -- Indexes --
+  @@index([adminId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
 }
 
 /// OAuth provider linked to a user (e.g., Google, Github)
@@ -215,6 +262,8 @@ model Business {
   bookings Booking[] /// All appointments at this business
   reviews Review[]   /// Customer reviews for this business
   favorites Favorite[] /// All customer's that favorited this business
+  commissions Commission[] /// Commissions generated from paid bookings
+  payouts Payout[] /// Payout batches for this business
 
   // -- Indexes --
   @@index([category])  // Fast filtering by business category
@@ -308,6 +357,7 @@ model Booking {
   service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   payment Payment? /// Associated payment record (created when payment is initiated)
   review Review? /// Optional review left after the appointment
+  commission Commission? /// Commission record generated after successful payment
 
   // -- Indexes --
   @@index([customerId]) // Customer's booking history
@@ -338,6 +388,56 @@ model Payment {
   // -- Indexes --
   @@index([status]) // Filter payments by status (e.g., find all failed payments)
   @@map("payments")
+}
+
+/// Commission line item generated from a paid booking.
+model Commission {
+  id String @id @default(cuid())
+  bookingId String @unique
+  businessId String
+  payoutId String?
+  grossAmount Decimal @db.Decimal(10, 2)
+  commissionRate Float
+  commissionAmount Decimal @db.Decimal(10, 2)
+  netAmount Decimal @db.Decimal(10, 2)
+  status CommissionStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // -- Relations --
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  payout Payout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  // -- Indexes --
+  @@index([businessId, status])
+  @@index([payoutId])
+  @@map("commissions")
+}
+
+/// Business payout batch for a specific period.
+model Payout {
+  id String @id @default(cuid())
+  businessId String
+  amount Decimal @db.Decimal(10, 2)
+  commissionTotal Decimal @db.Decimal(10, 2)
+  grossTotal Decimal @db.Decimal(10, 2)
+  period String
+  status PayoutStatus @default(PENDING)
+  paidAt DateTime?
+  reference String?
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // -- Relations --
+  commissions Commission[]
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // -- Indexes --
+  @@index([businessId, period])
+  @@index([status])
+  @@map("payouts")
 }
 
 

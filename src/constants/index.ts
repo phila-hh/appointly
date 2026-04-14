@@ -20,6 +20,12 @@ import {
   Users,
   Star,
   Settings,
+  ShieldCheck,
+  Building2,
+  MessageSquareWarning,
+  ScrollText,
+  HandCoins,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -60,11 +66,23 @@ export const MAIN_NAV_LINKS: NavLink[] = [
 export const DASHBOARD_NAV_LINKS: NavLink[] = [
   { label: "Overview", href: "/dashboard/overview", icon: LayoutDashboard },
   { label: "Bookings", href: "/dashboard/bookings", icon: CalendarDays },
+  { label: "Earnings", href: "/dashboard/earnings", icon: Wallet },
   { label: "Services", href: "/dashboard/services", icon: Scissors },
   { label: "Availability", href: "/dashboard/availability", icon: Clock },
   { label: "Customers", href: "/dashboard/customers", icon: Users },
   { label: "Reviews", href: "/dashboard/reviews", icon: Star },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
+];
+
+/** Sidebar links for the admin dashboard. */
+export const ADMIN_NAV_LINKS: NavLink[] = [
+  { label: "Overview", href: "/admin/overview", icon: LayoutDashboard },
+  { label: "Finance", href: "/admin/finance", icon: HandCoins },
+  { label: "Users", href: "/admin/users", icon: Users },
+  { label: "Businesses", href: "/admin/businesses", icon: Building2 },
+  { label: "Reviews", href: "/admin/reviews", icon: MessageSquareWarning },
+  { label: "Audit Log", href: "/admin/audit-log", icon: ScrollText },
+  { label: "Platform", href: "/admin/platform", icon: ShieldCheck },
 ];
 
 // =============================================================================

@@ -134,7 +134,11 @@ export async function login(
 
     // Determine where to redirect after successful login
     const redirectTo =
-      user?.role == "BUSINESS_OWNER" ? "/dashboard/overview" : "/browse";
+      user?.role === "ADMIN"
+        ? "/admin/overview"
+        : user?.role === "BUSINESS_OWNER"
+          ? "/dashboard/overview"
+          : "/browse";
 
     // Step 3: Attempt to sign in via NextAuth's credentials provider.
     // This calls the `authorize` function we defined in auth.ts
