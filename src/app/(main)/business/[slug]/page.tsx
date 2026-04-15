@@ -1,21 +1,22 @@
 /**
  * @file Business Detail Page
- * @description Public-facing business profile page with services and reviews.
+ * @description Public-facing business profile page with services, team, and reviews.
  *
  * Features:
  *   - Business information (name, description, contact, hours)
  *   - Average rating and review count
- *   - List of active services
+ *   - List of active services with "Book Now" buttons
+ *   - Team tab showing staff members (Phase 15B) — only if staff exist
  *   - Customer reviews with filtering
  *   - Favorite button for customers
- *   - "Book Now" buttons for each service
+ *   - "Book with [Name]" deep-link per staff member
  *
  * URL: /business/[slug]
  */
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { MapPin, Phone, Mail, Globe, Clock } from "lucide-react";
+import { MapPin, Phone, Mail, Globe, Clock, UserCog } from "lucide-react";
 
 import db from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
@@ -24,15 +25,14 @@ import {
   getReviewStats,
   getBusinessReviews,
 } from "@/lib/actions/review-queries";
+import { getBusinessStaffPublic } from "@/lib/actions/staff-queries";
 import { BUSINESS_CATEGORIES } from "@/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-// import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FavoriteButton } from "@/components/shared/favorite-button";
 import { StarRating } from "@/components/shared/star-rating";
-// import { ServiceCard } from "@/components/shared/service-card";
 import { ReviewList } from "@/components/shared/review-list";
 import { formatPrice, formatDuration } from "@/lib/utils";
 
@@ -49,9 +49,7 @@ export async function generateMetadata({ params }: BusinessPageProps) {
   });
 
   if (!business) {
-    return {
-      title: "Business Not Found",
-    };
+    return { title: "Business Not Found" };
   }
 
   return {
@@ -82,12 +80,22 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
 
   if (!business) notFound();
 
-  // Fetch review stats and recent reviews
-  const [reviewStats, reviewsData, favorited] = await Promise.all([
-    getReviewStats(business.id),
-    getBusinessReviews(business.id, { page: 1, limit: 20, sortBy: "newest" }),
-    user ? isFavorited(business.id) : Promise.resolve(false),
-  ]);
+  // Fetch review stats, reviews, favorites, and public staff in parallel
+  const [reviewStats, reviewsData, favorited, staffMembers] = await Promise.all(
+    [
+      getReviewStats(business.id),
+      getBusinessReviews(business.id, {
+        page: 1,
+        limit: 20,
+        sortBy: "newest",
+      }),
+      user ? isFavorited(business.id) : Promise.resolve(false),
+      getBusinessStaffPublic(business.id),
+    ]
+  );
+
+  /** Whether this business has any active staff members. */
+  const hasStaff = staffMembers.length > 0;
 
   // Build business address
   const address = [
@@ -139,13 +147,20 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
 
         {/* Main content — two columns */}
         <div className="grid gap-8 lg:grid-cols-3">
-          {/* Left column: Services and Reviews */}
+          {/* Left column: Services, Team (if applicable), and Reviews */}
           <div className="space-y-8 lg:col-span-2">
             <Tabs defaultValue="services">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList
+                className={`grid w-full ${hasStaff ? "grid-cols-3" : "grid-cols-2"}`}
+              >
                 <TabsTrigger value="services">
                   Services ({business.services.length})
                 </TabsTrigger>
+                {hasStaff && (
+                  <TabsTrigger value="team">
+                    Team ({staffMembers.length})
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="reviews">
                   Reviews ({reviewStats.totalCount})
                 </TabsTrigger>
@@ -194,6 +209,89 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
                   </p>
                 )}
               </TabsContent>
+
+              {/* Team tab — only rendered when business has staff */}
+              {hasStaff && (
+                <TabsContent value="team" className="mt-6 space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {staffMembers.map((member) => (
+                      <Card key={member.id}>
+                        <CardContent className="p-6">
+                          <div className="space-y-3">
+                            {/* Staff header */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <h3 className="font-semibold">{member.name}</h3>
+                                {member.title && (
+                                  <p className="text-sm text-muted-foreground">
+                                    {member.title}
+                                  </p>
+                                )}
+                              </div>
+                              <UserCog className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
+                            </div>
+
+                            {/* Services this staff member performs */}
+                            {member.services.length > 0 && (
+                              <div className="space-y-1.5">
+                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  Specializes in
+                                </p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {member.services.map((ss) => (
+                                    <Badge
+                                      key={ss.service.id}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {ss.service.name}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Book with this staff member — links per service */}
+                            {member.services.length > 0 && (
+                              <div className="pt-1">
+                                {member.services.length === 1 ? (
+                                  // Single service — direct book link
+                                  <Button
+                                    asChild
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full"
+                                  >
+                                    <Link
+                                      href={`/business/${business.slug}/book?service=${member.services[0].service.id}&staff=${member.id}`}
+                                    >
+                                      Book with {member.name.split(" ")[0]}
+                                    </Link>
+                                  </Button>
+                                ) : (
+                                  // Multiple services — book with first service by default
+                                  <Button
+                                    asChild
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full"
+                                  >
+                                    <Link
+                                      href={`/business/${business.slug}/book?service=${member.services[0].service.id}&staff=${member.id}`}
+                                    >
+                                      Book with {member.name.split(" ")[0]}
+                                    </Link>
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </TabsContent>
+              )}
 
               {/* Reviews tab */}
               <TabsContent value="reviews" className="mt-6">

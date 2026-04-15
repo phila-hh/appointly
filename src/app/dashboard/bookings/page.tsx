@@ -2,8 +2,14 @@
  * @file Dashboard Bookings Page
  * @description Incoming booking management for business owners.
  *
- * Reuses the BookingList component with BUSINESS_OWNER role config,
- * which allows confirm/complete/cancel/no-show action buttons.
+ * Features:
+ *   - Status filter (All, Pending, Confirmed, etc.)
+ *   - Staff filter — filter bookings by assigned team member (Phase 15B)
+ *   - Assigned staff name shown on each booking card
+ *   - Reuses BookingList component with BUSINESS_OWNER role config
+ *
+ * Staff filter is only rendered when the business has at least one
+ * staff member. Businesses without staff see the original UI.
  *
  * URL: /dashboard/bookings
  */
@@ -13,14 +19,16 @@ import { format } from "date-fns";
 
 import { requireBusiness } from "@/lib/actions/business-queries";
 import { getBusinessBookings } from "@/lib/actions/booking-queries";
+import { getBusinessStaff } from "@/lib/actions/staff-queries";
 import { BookingList } from "@/components/shared/booking-list";
+import { StaffBookingFilter } from "@/components/shared/staff-booking-filter";
 
 export const metadata = {
   title: "Bookings",
 };
 
 interface DashboardBookingsPageProps {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; staffId?: string }>;
 }
 
 export default async function DashboardBookingsPage({
@@ -29,7 +37,20 @@ export default async function DashboardBookingsPage({
   await requireBusiness();
 
   const params = await searchParams;
-  const bookings = await getBusinessBookings(params.status);
+
+  // Fetch bookings with optional staff filter
+  const bookings = await getBusinessBookings(params.status, params.staffId);
+
+  // Fetch staff for the filter dropdown
+  const staff = await getBusinessStaff();
+  const hasStaff = staff.length > 0;
+
+  // Serialize staff for the filter component
+  const serializedStaff = staff.map((member) => ({
+    id: member.id,
+    name: member.name,
+    title: member.title,
+  }));
 
   // Serialize bookings for client component
   const serializedBookings = bookings.map((booking) => ({
@@ -50,11 +71,18 @@ export default async function DashboardBookingsPage({
       name: booking.service.name,
       duration: booking.service.duration,
     },
+    staff: booking.staff
+      ? {
+          id: booking.staff.id,
+          name: booking.staff.name,
+          title: booking.staff.title,
+        }
+      : null,
     hasReview: false,
     customer: {
       name: booking.customer.name,
       email: booking.customer.email,
-      phone: booking.customer.email,
+      phone: booking.customer.phone,
     },
   }));
 
@@ -66,6 +94,14 @@ export default async function DashboardBookingsPage({
           View and manage your incoming appointment bookings.
         </p>
       </div>
+
+      {/* Staff filter — only shown when business has staff members */}
+      {hasStaff && (
+        <StaffBookingFilter
+          staffMembers={serializedStaff}
+          currentStaffId={params.staffId}
+        />
+      )}
 
       <Suspense>
         <BookingList bookings={serializedBookings} userRole="BUSINESS_OWNER" />

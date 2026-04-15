@@ -5,24 +5,30 @@
  * Flow:
  *   1. Customer arrives from the business detail page (with ?service=ID)
  *   2. Page shows the selected service details
- *   3. Customer picks a date from the calendar
- *   4. Available time slots load dynamically
- *   5. Customer selects slot and optionally adds notes
- *   6. Customer confirms the booking
+ *   3. If business has staff: staff selector is shown (Phase 15B)
+ *   4. Customer picks a date from the calendar
+ *   5. Available time slots load dynamically (staff-aware if staff selected)
+ *   6. Customer selects slot and optionally adds notes
+ *   7. Customer confirms the booking
  *
- * URL: /business/[slug]/book?service=serviceId
+ * Backwards compatibility:
+ *   If the business has no staff for the selected service, staffMembers
+ *   is passed as an empty array and the form behaves exactly as before.
+ *
+ * URL: /business/[slug]/book?service=serviceId&staff=staffId
  */
 
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import { getBusinessBySlug } from "@/lib/actions/public-queries";
+import { getStaffForService } from "@/lib/actions/staff-queries";
 import { getCurrentUser } from "@/lib/session";
 import { BookingForm } from "@/components/forms/booking-form";
 
 interface BookingPageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ service?: string }>;
+  searchParams: Promise<{ service?: string; staff?: string }>;
 }
 
 export async function generateMetadata({
@@ -59,7 +65,7 @@ export default async function BookingPage({
     notFound();
   }
 
-  // FInd the selected service
+  // Find the selected service
   const selectedService = serviceId
     ? business.services.find((s) => s.id === serviceId)
     : business.services[0]; // Default to first service
@@ -67,6 +73,13 @@ export default async function BookingPage({
   if (!selectedService) {
     notFound();
   }
+
+  // Fetch staff members who can perform the selected service
+  // Returns empty array for businesses with no staff (backwards compatible)
+  const staffForService = await getStaffForService(
+    business.id,
+    selectedService.id
+  );
 
   // Serialize service data for client component
   const serviceData = {
@@ -77,7 +90,7 @@ export default async function BookingPage({
     description: selectedService.description,
   };
 
-  // Serialize all service for the service selector
+  // Serialize all services for the service selector
   const allServices = business.services.map((s) => ({
     id: s.id,
     name: s.name,
@@ -101,13 +114,15 @@ export default async function BookingPage({
           </h1>
           <p className="mt-1 text-muted-foreground">{business.name}</p>
         </div>
-        {/* Booking form */}
+
+        {/* Booking form — passes staff data if available */}
         <BookingForm
           businessId={business.id}
           businessSlug={business.slug}
           selectedService={serviceData}
           allServices={allServices}
           closedDays={closedDays}
+          staffMembers={staffForService}
         />
       </div>
     </div>

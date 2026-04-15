@@ -36,7 +36,7 @@
  * ```
  */
 
-import { DayOfWeek } from "@/generated/prisma/client";
+import { DayOfWeek, BookingStatus } from "@/generated/prisma/client";
 
 /** Represents a single bookable time slot. */
 export interface TimeSlot {
@@ -439,7 +439,7 @@ export async function selectStaffRoundRobin(
         where: {
           staffId: string;
           date: Date;
-          status: { in: string[] };
+          status: { in: BookingStatus[] };
         };
       }) => Promise<number>;
     };

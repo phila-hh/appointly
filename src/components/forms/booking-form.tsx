@@ -1,15 +1,21 @@
 /**
  * @file Booking Form Component
- * @description Interactive booking form with calendar, time slots, and notes.
+ * @description Interactive booking form with calendar, time slots, notes,
+ * and optional staff member selection.
  *
  * Features:
  *   - Service selector (switch between available services)
+ *   - Staff selector ("Any Available" or specific staff member)
  *   - Calendar date picker with closed days disabled
- *   - Dynamic time-slot loading based on selected date
+ *   - Dynamic time-slot loading based on selected date and staff
  *   - Time slot grid with visual selection
  *   - Optional notes textarea
  *   - Loading states during slot fetching and booking creation
  *   - Past dates disabled on calendar
+ *
+ * Staff selector is only rendered when the business has staff members
+ * configured for the selected service. If no staff exist, the form
+ * behaves exactly as before (full backwards compatibility).
  */
 
 "use client";
@@ -17,7 +23,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format, isBefore, startOfDay } from "date-fns";
-import { CalendarIcon, Clock, Loader2 } from "lucide-react";
+import { CalendarIcon, Clock, Loader2, UserCog } from "lucide-react";
 import { toast } from "sonner";
 
 import { createBooking } from "@/lib/actions/booking";
@@ -48,6 +54,16 @@ interface ServiceData {
   description?: string | null;
 }
 
+/** Staff member data shape for the selector. */
+interface StaffMemberData {
+  id: string;
+  name: string;
+  title: string | null;
+}
+
+/** The sentinel value representing "Any Available" staff selection. */
+const ANY_AVAILABLE_VALUE = "__any__";
+
 /** Props for the BookingForm component. */
 interface BookingFormProps {
   businessId: string;
@@ -55,6 +71,8 @@ interface BookingFormProps {
   selectedService: ServiceData;
   allServices: ServiceData[];
   closedDays: string[];
+  /** Staff members who can perform the initial selected service. */
+  staffMembers?: StaffMemberData[];
 }
 
 /**
@@ -76,6 +94,7 @@ export function BookingForm({
   selectedService,
   allServices,
   closedDays,
+  staffMembers = [],
 }: BookingFormProps) {
   const router = useRouter();
 
@@ -85,13 +104,21 @@ export function BookingForm({
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [notes, setNotes] = useState("");
 
+  // Staff selection state
+  // ANY_AVAILABLE_VALUE = no preference; a staff ID = specific staff
+  const [selectedStaffId, setSelectedStaffId] =
+    useState<string>(ANY_AVAILABLE_VALUE);
+
   // Loading states
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Available time slots for the selected date
+  // Available time slots for the selected date and staff
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [slotsMessage, setSlotsMessage] = useState<string>("");
+
+  /** Whether this business has any staff members configured. */
+  const hasStaff = staffMembers.length > 0;
 
   /**
    * Convert closed days to JS day numbers for calendar disabling.
@@ -126,7 +153,8 @@ export function BookingForm({
   }
 
   /**
-   * Fetch available slots when the date or service changes.
+   * Fetch available slots when the date, service, or staff selection changes.
+   * Passes the staffId to the server action (null = any available).
    */
   useEffect(() => {
     if (!selectedDate) {
@@ -142,17 +170,27 @@ export function BookingForm({
 
       try {
         const dateStr = format(selectedDate!, "yyyy-MM-dd");
+
+        // Resolve staffId: null for "any available", string for specific
+        const staffIdParam =
+          selectedStaffId === ANY_AVAILABLE_VALUE ? null : selectedStaffId;
+
         const slots = await fetchAvailableSlots(
           businessId,
           currentService.id,
-          dateStr
+          dateStr,
+          staffIdParam
         );
 
         setAvailableSlots(slots);
 
         if (slots.length === 0) {
+          const staffNote =
+            hasStaff && selectedStaffId !== ANY_AVAILABLE_VALUE
+              ? " for this staff member"
+              : "";
           setSlotsMessage(
-            "No available time slots for this date. Try another date."
+            `No available time slots${staffNote} for this date. Try another date${hasStaff ? " or staff member" : ""}.`
           );
         }
       } catch {
@@ -164,19 +202,29 @@ export function BookingForm({
     }
 
     loadSlots();
-  }, [selectedDate, currentService.id, businessId]);
+  }, [selectedDate, currentService.id, businessId, selectedStaffId, hasStaff]);
 
   /**
    * Handle service change from the dropdown.
+   * Reset staff selection and slot state when service changes.
    */
   function handleServiceChange(serviceId: string) {
     const service = allServices.find((s) => s.id === serviceId);
     if (service) {
-      setCurrentService({
-        ...service,
-      });
+      setCurrentService(service);
       setSelectedSlot(null);
+      setSelectedStaffId(ANY_AVAILABLE_VALUE);
     }
+  }
+
+  /**
+   * Handle staff selection change.
+   * Reset slot and date selection when staff changes.
+   */
+  function handleStaffChange(value: string) {
+    setSelectedStaffId(value);
+    setSelectedSlot(null);
+    // Keep the selected date — just reload slots for the new staff
   }
 
   /**
@@ -191,6 +239,10 @@ export function BookingForm({
     setIsSubmitting(true);
 
     try {
+      // Resolve staffId: undefined for "any available", string for specific
+      const staffIdToSubmit =
+        selectedStaffId === ANY_AVAILABLE_VALUE ? undefined : selectedStaffId;
+
       const result = await createBooking({
         businessId,
         serviceId: currentService.id,
@@ -198,17 +250,24 @@ export function BookingForm({
         startTime: selectedSlot.startTime,
         endTime: selectedSlot.endTime,
         notes: notes || "",
+        staffId: staffIdToSubmit,
       });
 
       if (result.error) {
         toast.error(result.error);
         // Refresh slots in case the slot was taken
-        if (result.error.includes("no longer available")) {
+        if (
+          result.error.includes("no longer available") ||
+          result.error.includes("not available")
+        ) {
           const dateStr = format(selectedDate, "yyyy-MM-dd");
+          const staffIdParam =
+            selectedStaffId === ANY_AVAILABLE_VALUE ? null : selectedStaffId;
           const freshSlots = await fetchAvailableSlots(
             businessId,
             currentService.id,
-            dateStr
+            dateStr,
+            staffIdParam
           );
           setAvailableSlots(freshSlots);
           setSelectedSlot(null);
@@ -226,6 +285,13 @@ export function BookingForm({
       setIsSubmitting(false);
     }
   }
+
+  /** Display label for the selected staff member (for the booking summary). */
+  const selectedStaffName =
+    selectedStaffId === ANY_AVAILABLE_VALUE
+      ? "Any Available"
+      : (staffMembers.find((s) => s.id === selectedStaffId)?.name ??
+        "Any Available");
 
   return (
     <div className="space-y-6">
@@ -274,6 +340,50 @@ export function BookingForm({
                   <SelectItem key={service.id} value={service.id}>
                     {service.name} — {formatPrice(service.price)} (
                     {formatDuration(service.duration)})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Staff selector — only rendered when business has staff */}
+      {hasStaff && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <UserCog className="h-4 w-4" />
+              Select a Staff Member
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Select value={selectedStaffId} onValueChange={handleStaffChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {/* "Any Available" default option */}
+                <SelectItem value={ANY_AVAILABLE_VALUE}>
+                  <span className="flex items-center gap-2">
+                    Any Available
+                    <span className="text-xs text-muted-foreground">
+                      — System assigns best available
+                    </span>
+                  </span>
+                </SelectItem>
+
+                {/* Individual staff members */}
+                {staffMembers.map((member) => (
+                  <SelectItem key={member.id} value={member.id}>
+                    <span className="flex items-center gap-2">
+                      {member.name}
+                      {member.title && (
+                        <span className="text-xs text-muted-foreground">
+                          — {member.title}
+                        </span>
+                      )}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -365,7 +475,7 @@ export function BookingForm({
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="e.g., I'd prefer a specific barber, or I have allergies..."
+                placeholder="e.g., I'd prefer a specific style, or I have allergies..."
                 className="mt-1.5 min-h-[80px] resize-y"
                 maxLength={500}
                 disabled={isSubmitting}
@@ -385,6 +495,13 @@ export function BookingForm({
                   <span className="text-muted-foreground">Service</span>
                   <span>{currentService.name}</span>
                 </div>
+                {/* Staff summary row — only shown when business has staff */}
+                {hasStaff && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Staff</span>
+                    <span>{selectedStaffName}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Date</span>
                   <span>{format(selectedDate!, "MMMM d, yyyy")}</span>
