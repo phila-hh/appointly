@@ -6,7 +6,9 @@
  *   - 167 users (55 business owners, 110 customers, 2 admins)
  *   - 55 businesses across all 13 categories
  *   - 350+ services (5-10 per business, prices in ETB)
+ *   - 80+ staff members across eligible businesses
  *   - Weekly operating hours for all businesses
+ *   - Staff service assignments and individual schedules
  *   - 420+ bookings in every status with edge cases
  *   - Payment records for all bookings
  *   - Reviews for ~70% of completed bookings
@@ -20,6 +22,7 @@ import { getPrisma } from "./seed/helpers";
 import { seedUsers } from "./seed/users";
 import { seedBusinesses } from "./seed/businesses";
 import { seedServices } from "./seed/services";
+import { seedStaff } from "./seed/staff";
 import { seedBusinessHours } from "./seed/business-hours";
 import { seedBookings } from "./seed/bookings";
 import { seedPayments } from "./seed/payments";
@@ -42,6 +45,9 @@ async function main() {
   await prisma.review.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.booking.deleteMany();
+  await prisma.staffHours.deleteMany();
+  await prisma.staffService.deleteMany();
+  await prisma.staff.deleteMany();
   await prisma.businessHours.deleteMany();
   await prisma.service.deleteMany();
   await prisma.business.deleteMany();
@@ -77,7 +83,13 @@ async function main() {
   await seedBusinessHours(businesses);
 
   // ---------------------------------------------------------------------------
-  // Step 6: Seed bookings
+  // Step 6: Seed staff members (after services and business hours)
+  // ---------------------------------------------------------------------------
+
+  const staffMembers = await seedStaff(businesses, services);
+
+  // ---------------------------------------------------------------------------
+  // Step 7: Seed bookings
   // ---------------------------------------------------------------------------
 
   const bookings = await seedBookings(
@@ -87,19 +99,19 @@ async function main() {
   );
 
   // ---------------------------------------------------------------------------
-  // Step 7: Seed payments
+  // Step 8: Seed payments
   // ---------------------------------------------------------------------------
 
   await seedPayments(bookings);
 
   // ---------------------------------------------------------------------------
-  // Step 8: Seed reviews
+  // Step 9: Seed reviews
   // ---------------------------------------------------------------------------
 
   await seedReviews(bookings);
 
   // ---------------------------------------------------------------------------
-  // Step 9: Seed favorites
+  // Step 10: Seed favorites
   // ---------------------------------------------------------------------------
 
   await seedFavorites(
@@ -122,7 +134,8 @@ async function main() {
      └─ Admins:          ${admins.length}
   🏪 Businesses:   ${businesses.length} (across all 13 categories)
   💈 Services:     ${services.length}
-  🕐 Hours:        ${businesses.length * 7} entries
+  👥 Staff:        ${staffMembers.length} (across eligible categories)
+  🕐 Hours:        ${businesses.length * 7} business + ${staffMembers.length * 7} staff entries
   📅 Bookings:     ${bookings.length}
      ├─ COMPLETED:  ${bookings.filter((b) => b.status === "COMPLETED").length}
      ├─ CONFIRMED:  ${bookings.filter((b) => b.status === "CONFIRMED").length}

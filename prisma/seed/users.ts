@@ -16,6 +16,35 @@ async function createUsers() {
   const hashedPassword = await hash("password123", 10);
 
   // ---------------------------------------------------------------------------
+  // Admin users
+  // ---------------------------------------------------------------------------
+  const adminData = [
+    {
+      name: "Simon Gebru",
+      email: "simon.gebru@appointly.com",
+      phone: "+251-911-111101",
+    },
+    {
+      name: "Sara Shewit",
+      email: "sara.shewit@appointly.com",
+      phone: "+251-911-111102",
+    },
+  ];
+
+  const adminUsers = [];
+  for (const data of adminData) {
+    const user = await prisma.user.create({
+      data: {
+        ...data,
+        password: hashedPassword,
+        role: "ADMIN",
+        emailVerified: new Date(),
+      },
+    });
+    adminUsers.push(user);
+  }
+
+  // ---------------------------------------------------------------------------
   // Business owners (55) — Ethiopian names
   // ---------------------------------------------------------------------------
   const ownerData = [
@@ -914,60 +943,3 @@ export async function seedUsers(): Promise<SeededUsers> {
   );
   return result;
 }
-
-/// USERS CREDENTIALS
-// abebe.kebede@gmail.com : password123
-// tigist.haile@gmail.com : password123
-// dawit.mengistu@gmail.com : password123
-// meron.tadesse@gmail.com : password123
-// yohannes.bekele@gmail.com : password123
-// hiwot.alemu@gmail.com : password123
-// solomon.gebre@gmail.com : password123
-// bethlehem.worku@gmail.com : password123
-// tewodros.assefa@gmail.com : password123
-// selamawit.desta@gmail.com : password123
-// biniam.tesfaye@gmail.com : password123
-// rahel.girma@gmail.com : password123
-// henok.abera@gmail.com : password123
-// mahlet.sisay@gmail.com : password123
-// ermias.wolde@gmail.com : password123
-// kidist.mulugeta@gmail.com : password123
-// nahom.berhanu@gmail.com : password123
-// tsion.fekadu@gmail.com : password123
-// mikael.negash@gmail.com : password123
-// frehiwot.getachew@gmail.com : password123
-// yared.mekonnen@gmail.com : password123
-// liya.gebremedhin@gmail.com : password123
-// bereket.tadesse2@gmail.com : password123
-// meseret.ayele@gmail.com : password123
-// fitsum.hailu@gmail.com : password123
-// aida.cherinet@gmail.com : password123
-// daniel.teshome@gmail.com : password123
-// eyerusalem.wondwossen@gmail.com : password123
-// robel.zewdu@gmail.com : password123
-// helina.fikre@gmail.com : password123
-// abel.kassahun@gmail.com : password123
-// selam.belay@gmail.com : password123
-// natnael.yilma@gmail.com : password123
-// bezawit.demissie@gmail.com : password123
-// kaleb.shiferaw@gmail.com : password123
-// ruth.tekle@gmail.com : password123
-// yonatan.dereje@gmail.com : password123
-// mekdes.asfaw@gmail.com : password123
-// samuel.getnet@gmail.com : password123
-// tigist.woldegiorgis@gmail.com : password123
-// ephrem.bekele@gmail.com : password123
-// sara.mesfin@gmail.com : password123
-// temesgen.abate@gmail.com : password123
-// hanna.workneh@gmail.com : password123
-// kirubel.alem@gmail.com : password123
-// yemisrach.tadesse@gmail.com : password123
-// amanuel.gizaw@gmail.com : password123
-// eden.mulatu@gmail.com : password123
-// filmon.tesfay@gmail.com : password123
-// martha.gebreyesus@gmail.com : password123
-// leul.woldemariam@gmail.com : password123
-// sosina.habte@gmail.com : password123
-// yosef.kiros@gmail.com : password123
-// haimanot.tefera@gmail.com : password123
-// nebiyu.tadesse@gmail.com : password123
