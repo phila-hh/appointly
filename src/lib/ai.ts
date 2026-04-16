@@ -1,31 +1,30 @@
 /**
  * @file AI Utility Functions
- * @description integration with Hugging Face's free inference API for
- * AI powered features across the platform.
+ * @description integration with external AI services for intelligent
+ * platform features.
  *
  * Capabilities:
- *   - Review sentiment analysis (positive / neutral / negative)
+ *   - Review sentiment analysis (Hugging Face)
+ *   - Natural language search intent extraction (OpenRouter)
  *
- * Architecture:
- *   - Uses Hugging Face's inference API
- *   - Model: cardiffnlp/twitter-roberta-base-sentiment-latest
- *   - All functions are designed to fail gracefully — AI failures
- *   - Should NEVER block core platform functionality
- *   - Results are cached on the database record (no re-analyzed)
+ * Providers:
+ *   - Hugging Face inference API — sentiment analysis
+ *   - OpenRouter API — LLM-powered search intent extraction
  *
  * Error handling philosophy:
- *   - Network errors → return null (skip analysis)
- *   - Rate limiting → return null (skip analysis)
- *   - Invalid response → return null (skip analysis)
- *   - Missing API token → return null (skip analysis)
- *   - The caller decides what to do with null (typically save without sentiment)
+ *   - All functions are designed to fail gracefully
+ *   - All failures never block core platform functionality
+ *   - Network errors, rate limits, invalid responses → return null
+ *   - The caller decides what to do with null
  *
  * @see https://huggingface.co/docs/api-inference/index
- * @see https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest
+ * @see https://openrouter.ai/docs
  */
 
+import { DayOfWeek } from "@/generated/prisma/client";
+
 // =============================================================================
-// Types
+// Types — Sentiment Analysis
 // =============================================================================
 
 /**
@@ -43,15 +42,6 @@ export interface SentimentResult {
  * Raw response shape from the Hugging Face inference API.
  * The API returns an array of arrays — each inner array contains
  * all sentiment labels with their scores, sorted by confidence.
- *
- * @example
- * ```json
- * [[
- *   { "label": "positive", "score": 0.95 },
- *   { "label": "neutral", "score": 0.03 },
- *   { "label": "negative", "score": 0.02 }
- * ]]
- * ```
  */
 interface HuggingFaceClassification {
   label: string;
@@ -59,7 +49,35 @@ interface HuggingFaceClassification {
 }
 
 // =============================================================================
-// Constants
+// Types — Search Intent Extraction
+// =============================================================================
+
+/**
+ * Structured search intent extracted from a natural language query.
+ *
+ * Each field is optional — the LLM only populates fields it can
+ * confidently extract from the user's query. Null fields are ignored
+ * when building the database query.
+ */
+export interface SearchIntent {
+  /** Business category enum value (e.g., "BARBERSHOP", "SPA") */
+  category?: string | null;
+  /** Maximum price the customer is willing to pay (in ETB) */
+  maxPrice?: number | null;
+  /** City name to filter by */
+  city?: string | null;
+  /** Days of the week the customer wants availability */
+  dayOfWeek?: DayOfWeek[] | null;
+  /** Keywords related to specific services */
+  serviceKeywords?: string[] | null;
+  /** General search terms to match against business names/description */
+  searchTerms?: string | null;
+  /** Human-readable explanation of what the AI understood */
+  explanation?: string | null;
+}
+
+// =============================================================================
+// Constants — Hugging Face
 // =============================================================================
 
 /** The Hugging Face model used for sentiment analysis. */
@@ -69,27 +87,67 @@ const SENTIMENT_MODEL = "cardiffnlp/twitter-roberta-base-sentiment-latest";
 const HF_API_BASE = "https://router.huggingface.co/hf-inference/models";
 
 /** Request timeout in milliseconds (5 seconds) */
-const REQUEST_TIMEOUT_MS = 5000;
+const HF_REQUEST_TIMEOUT_MS = 5000;
 
 /**
  * Minimum text length required for meaningful sentiment analysis.
- * Very short texts (e.g., "ok", "good") produce unreliable results.
  */
 const MIN_TEXT_LENGTH = 3;
 
 /**
  * Maximum text length sent to the model.
- * The model has a token limit. We truncate to avoid errors.
- * 512 tokens ≈ ~300-400 words, which is more than enough for reviews.
  */
 const MAX_TEXT_LENGTH = 1000;
+
+// =============================================================================
+// Constants — OpenRouter
+// =============================================================================
+
+/** OpenRouter API base URL */
+const OPENROUTER_API_BASE = "https://openrouter.ai/api/v1/chat/completions";
+
+/**
+ * The LLM model used for search intent extraction..
+ */
+const SEARCH_INTENT_MODEL = "deepseek/deepseek-chat";
+
+/** Request timeout for LLM calls (10 seconds) */
+const LLM_REQUEST_TIMEOUT_MS = 10000;
+
+/** Valid business categories for the LLM prompt. */
+const VALID_CATEGORIES = [
+  "BARBERSHOP",
+  "SALON",
+  "SPA",
+  "FITNESS",
+  "DENTAL",
+  "MEDICAL",
+  "TUTORING",
+  "CONSULTING",
+  "PHOTOGRAPHY",
+  "AUTOMOTIVE",
+  "HOME_SERVICES",
+  "PET_SERVICES",
+  "OTHER",
+];
+
+/** Valid days of the week for the LLM prompt. */
+const VALID_DAYS = [
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+  "SATURDAY",
+  "SUNDAY",
+];
 
 // =============================================================================
 // Sentiment Analysis
 // =============================================================================
 
 /**
- * Analyzes the sentiment of a text using Hugging Face's
+ * Analyzes the sentiment of a text string using Hugging Face's
  * inference API.
  *
  * @param text - The text to analyze (e.g., a review comment)
@@ -107,7 +165,7 @@ export async function analyzeSentiment(
 
     if (!apiToken) {
       console.warn(
-        "HUGGINFACE_API_TOKEN not set — skipping sentiment analysis."
+        "⚠️ HUGGINFACE_API_TOKEN not set — skipping sentiment analysis."
       );
       return null;
     }
@@ -125,7 +183,10 @@ export async function analyzeSentiment(
     // -------------------------------------------------------------------------
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      HF_REQUEST_TIMEOUT_MS
+    );
 
     const response = await fetch(`${HF_API_BASE}/${SENTIMENT_MODEL}`, {
       method: "POST",
@@ -150,7 +211,7 @@ export async function analyzeSentiment(
       // may take 20 to 30 seconds to load a model on first request.
       if (response.status === 503) {
         console.warn(
-          "Sentiment model is loading (cold start) — skipping analysis."
+          "⚠️ Sentiment model is loading (cold start) — skipping analysis."
         );
         return null;
       }
@@ -158,13 +219,13 @@ export async function analyzeSentiment(
       // 429 = rate limit exceeded
       if (response.status === 429) {
         console.warn(
-          "Hugging Face rate limit reached — skipping sentiment analysis."
+          "⚠️ Hugging Face rate limit reached — skipping sentiment analysis."
         );
         return null;
       }
 
       console.warn(
-        `Sentiment API returned ${response.status} — skipping analysis.`
+        `⚠️ Sentiment API returned ${response.status} — skipping analysis.`
       );
       return null;
     }
@@ -181,7 +242,7 @@ export async function analyzeSentiment(
       !Array.isArray(data[0]) ||
       data[0].length === 0
     ) {
-      console.warn("Unexpected sentiment API response shape — skipping");
+      console.warn("⚠️ Unexpected sentiment API response shape — skipping");
       return null;
     }
 
@@ -195,7 +256,7 @@ export async function analyzeSentiment(
       typeof topResult.label !== "string" ||
       typeof topResult.score !== "number"
     ) {
-      console.warn("Invalid sentiment result format — skipping");
+      console.warn("⚠️ Invalid sentiment result format — skipping");
       return null;
     }
 
@@ -206,7 +267,7 @@ export async function analyzeSentiment(
     const validLabels = ["positive", "neutral", "negative"];
     if (!validLabels.includes(normalizedLabel)) {
       console.warn(
-        `Unexpected sentiment label "${normalizedLabel}" — skipping.`
+        `⚠️ Unexpected sentiment label "${normalizedLabel}" — skipping.`
       );
       return null;
     }
@@ -218,12 +279,241 @@ export async function analyzeSentiment(
   } catch (error) {
     // Abort error = request timed out
     if (error instanceof DOMException && error.name === "AbortError") {
-      console.warn("Sentiment analysis timed out — skipping");
+      console.warn("⚠️ Sentiment analysis timed out — skipping");
       return null;
     }
 
     // Network errors, JSON parse errors, etc.
-    console.warn("Sentiment analysis failed — skipping", error);
+    console.warn("⚠️ Sentiment analysis failed — skipping", error);
+    return null;
+  }
+}
+
+// =============================================================================
+// Search Intent Extraction
+// =============================================================================
+
+/**
+ * The system prompt that instructs the LLM how to extract search intent.
+ *
+ * Key design choices:
+ *   - Returns ONLY valid JSON (no markdown, no explanation outside JSON)
+ *   - Uses the exact enum values from our Prisma schema
+ *   - Includes price context with calibrated ranges
+ *   - Handles temporal references ("This weekend", "tomorrow", "Saturday")
+ *   - The explanation field provides a human readable summary
+ */
+function buildSearchIntentPrompt(): string {
+  return `You are a search intent extractor for Appointly, an appointment booking platform in Ethiopia.
+Extract structured search parameters from the user's natural language query.
+
+IMPORTANT: Respond with ONLY valid JSON. No markdown, no code blocks, no explanation outside the JSON.
+
+Extract these fields (use null for anything you can't determine):
+
+{
+  "category": one of [${VALID_CATEGORIES.map((c) => `"${c}"`).join(", ")}] or null,
+  "maxPrice": number in ETB (Ethiopian Birr) or null. "cheap"/"affordable" = 200, "moderate" = 500, "expensive"/"premium" = 1000+,
+  "city": city name string or null,
+  "dayOfWeek": array of [${VALID_DAYS.map((d) => `"${d}"`).join(", ")}] or null. "weekend" = ["SATURDAY", "SUNDAY"], "weekday" = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"],
+  "serviceKeywords": array of service-related keywords or null,
+  "searchTerms": general search text to match business names/descriptions or null,
+  "explanation": brief human-readable summary of what you understood (always include this)
+}
+
+Examples:
+- "cheap haircut near Bole" → {"category":"BARBERSHOP","maxPrice":200,"city":"Addis Ababa","dayOfWeek":null,"serviceKeywords":["haircut"],"searchTerms":"haircut","explanation":"Looking for affordable barbershops near Bole, Addis Ababa"}
+- "massage this weekend" → {"category":"SPA","maxPrice":null,"city":null,"dayOfWeek":["SATURDAY","SUNDAY"],"serviceKeywords":["massage"],"searchTerms":"massage","explanation":"Looking for spa services offering massage this weekend"}
+- "dentist in Mekelle" → {"category":"DENTAL","maxPrice":null,"city":"Mekelle","dayOfWeek":null,"serviceKeywords":null,"searchTerms":"dentist","explanation":"Looking for dental clinics in Mekelle"}
+- "yoga classes" → {"category":"FITNESS","maxPrice":null,"city":null,"dayOfWeek":null,"serviceKeywords":["yoga"],"searchTerms":"yoga","explanation":"Looking for fitness studios offering yoga classes"}`;
+}
+
+/**
+ * Extracts structured search intent from a natural language query
+ * using an LLM via OpenRouter.
+ *
+ * @param query - The user's natural language search query
+ * @returns Structured SearchIntent or null on failure
+ */
+export async function extractSearchIntent(
+  query: string
+): Promise<SearchIntent | null> {
+  try {
+    // -------------------------------------------------------------------------
+    // Guard: Check prerequisites
+    // -------------------------------------------------------------------------
+
+    const apiKey = process.env.OPENROUTER_API_KEY;
+
+    if (!apiKey) {
+      console.warn(
+        "⚠️ OPENROUTER_API_KEY not set — skipping AI search intent extraction."
+      );
+      return null;
+    }
+
+    if (!query || query.trim().length < 3) {
+      return null;
+    }
+
+    // -------------------------------------------------------------------------
+    // LLM API request with timeout
+    // -------------------------------------------------------------------------
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      LLM_REQUEST_TIMEOUT_MS
+    );
+
+    const response = await fetch(OPENROUTER_API_BASE, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.AUTH_URL || "http://localhost:3000",
+        "x-Title": "Appointly",
+      },
+      body: JSON.stringify({
+        model: SEARCH_INTENT_MODEL,
+        messages: [
+          { role: "system", content: buildSearchIntentPrompt() },
+          { role: "user", content: query },
+        ],
+        temperature: 0.1, // Low temperature for consistent, deterministic extraction
+        max_tokens: 300, // Intent JSON should be well under 300 tokens
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    // -------------------------------------------------------------------------
+    // Handle non-success responses
+    // -------------------------------------------------------------------------
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        console.warn("⚠️ OpenRouter rate limit reached — skipping AI search.");
+        return null;
+      }
+
+      console.warn(
+        `⚠️ OpenRouter API returned ${response.status} — skipping AI search.`
+      );
+      return null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Parse the LLM response
+    // -------------------------------------------------------------------------
+
+    const data = await response.json();
+
+    const content = data?.choices?.[0]?.message?.content;
+
+    if (!content || typeof content !== "string") {
+      console.warn("⚠️ Empty or invalid LLM response — skipping.");
+      return null;
+    }
+
+    // Extract JSON from the response (handle potential markdown wrapping)
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+
+    if (!jsonMatch) {
+      console.warn("⚠️ No JSON found in LLM response — skipping.");
+      return null;
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    // -------------------------------------------------------------------------
+    // Validate and sanitize the extracted intent
+    // -------------------------------------------------------------------------
+
+    const intent: SearchIntent = {
+      category: null,
+      maxPrice: null,
+      city: null,
+      dayOfWeek: null,
+      serviceKeywords: null,
+      searchTerms: null,
+      explanation: null,
+    };
+
+    // Validate category against our own
+    if (
+      parsed.category &&
+      typeof parsed.category === "string" &&
+      VALID_CATEGORIES.includes(parsed.category.toUpperCase())
+    ) {
+      intent.category = parsed.category.toUpperCase();
+    }
+
+    // Validate max price
+    if (
+      parsed.maxPrice &&
+      typeof parsed.maxPrice === "number" &&
+      parsed.maxPrice > 0
+    ) {
+      intent.maxPrice = parsed.maxPrice;
+    }
+
+    // Validate city
+    if (parsed.city && typeof parsed.city === "string" && parsed.city.trim()) {
+      intent.city = parsed.city;
+    }
+
+    // Validate dayOfWeek
+    if (Array.isArray(parsed.dayOfWeek) && parsed.dayOfWeek.length > 0) {
+      const validDays = parsed.dayOfWeek
+        .map((d: unknown) => (typeof d === "string" ? d.toUpperCase() : null))
+        .filter(
+          (d: string | null): d is string =>
+            d !== null && VALID_DAYS.includes(d)
+        );
+      if (validDays.length > 0) {
+        intent.dayOfWeek = validDays;
+      }
+    }
+
+    // Validate serviceKeywords
+    if (
+      Array.isArray(parsed.serviceKeywords) &&
+      parsed.serviceKeywords.length > 0
+    ) {
+      intent.serviceKeywords = parsed.serviceKeywords
+        .filter((k: unknown) => typeof k === "string" && k.trim())
+        .map((k: string) => k.trim().toLowerCase())
+        .slice(0, 5); // Limit to 5 keywords
+    }
+
+    // Validate searchTerms
+    if (
+      parsed.searchTerms &&
+      typeof parsed.searchTerms === "string" &&
+      parsed.searchTerms.trim()
+    ) {
+      intent.searchTerms = parsed.searchTerms;
+    }
+
+    // Validate explanation
+    if (
+      parsed.explanation &&
+      typeof parsed.explanation === "string" &&
+      parsed.explanation.trim()
+    ) {
+      intent.explanation = parsed.explanation;
+    }
+
+    return intent;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      console.warn("⚠️ AI search intent extraction timed out — skipping.");
+      return null;
+    }
+
+    console.warn("⚠️ AI search intent extraction failed — skipping:", error);
     return null;
   }
 }

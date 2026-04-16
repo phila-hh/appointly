@@ -5,10 +5,8 @@
  * This is a Server Component that:
  *   1. Reads filter parameters from the URL search params
  *   2. Queries the database for matching businesses
- *   3. Renders the filter bar, business cards grid, and pagination
- *
- * The filter bar and pagination are Client Components that update
- * the URL, triggering a new server render with updated data.
+ *   3. Renders the AI search bar (Phase 16B), filter bar, business cards
+ *      grid, and pagination
  *
  * URL: /browse
  * URL with filters: /browse?category=BARBERSHOP&city=Austin&search=cuts&page=2
@@ -17,6 +15,7 @@
 import { Suspense } from "react";
 import { Store } from "lucide-react";
 
+import { getCurrentUser } from "@/lib/session";
 import {
   browseBusinesses,
   getAvailableCities,
@@ -24,6 +23,7 @@ import {
 import { BusinessCard } from "@/components/shared/business-card";
 import { BrowseFilters } from "@/components/shared/browse-filters";
 import { BrowsePagination } from "@/components/shared/browse-pagination";
+import { AISearchBar } from "@/components/shared/ai-search-bar";
 
 export const metadata = {
   title: "Browse Services",
@@ -46,6 +46,10 @@ interface BrowsePageProps {
 
 export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const params = await searchParams;
+
+  // Check if user is authenticated (for AI search bar)
+  const user = await getCurrentUser();
+  const isAuthenticated = !!user;
 
   // Fetch available cities for the filter dropdown
   const availableCities = await getAvailableCities();
@@ -70,7 +74,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           </p>
         </div>
 
-        {/* Filters — wrapped in Suspense because it uses useSearchParams */}
+        {/* AI Search Bar */}
+        <AISearchBar isAuthenticated={isAuthenticated} />
+
+        {/* Standard Filters — wrapped in Suspense because it uses useSearchParams */}
         <Suspense fallback={<FiltersSkeleton />}>
           <BrowseFilters availableCities={availableCities} />
         </Suspense>
