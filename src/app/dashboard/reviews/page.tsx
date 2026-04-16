@@ -3,10 +3,12 @@
  * @description Business owner view of all reviews received.
  *
  * Features:
- *   - List of all reviews with filtering
  *   - Review statistics (average rating, distribution)
+ *   - AI sentiment analysis summary (Phase 16A)
+ *   - List of all reviews with filtering by rating and sentiment
  *   - Sort by date or rating
  *   - Shows which service was reviewed
+ *   - Sentiment badges on each review card
  *
  * URL: /dashboard/reviews
  */
@@ -26,7 +28,7 @@ export const metadata = {
 export default async function DashboardReviewsPage() {
   const business = await requireBusiness();
 
-  // Fetch reviews and stats
+  // Fetch reviews and stats (including sentiment distribution)
   const [reviewsData, stats] = await Promise.all([
     getBusinessReviews(business.id, { page: 1, limit: 50, sortBy: "newest" }),
     getReviewStats(business.id),
@@ -38,14 +40,15 @@ export default async function DashboardReviewsPage() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Customer Reviews</h2>
         <p className="text-muted-foreground">
-          See what your customers are saying about your services.
+          See what your customers are saying about your services. AI sentiment
+          analysis runs automatically on new reviews.
         </p>
       </div>
 
-      {/* Review statistics */}
+      {/* Review statistics with sentiment summary */}
       <ReviewStatistics stats={stats} />
 
-      {/* Reviews list */}
+      {/* Reviews list with sentiment badges and filters */}
       <ReviewList
         reviews={reviewsData.reviews.map((review) => ({
           ...review,

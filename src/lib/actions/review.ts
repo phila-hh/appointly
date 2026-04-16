@@ -8,6 +8,11 @@
  *   - One review per booking (enforced by database constraint)
  *   - Users can update their own reviews
  *   - Users can delete their own reviews
+ *
+ * AI integration:
+ *   - Sentiment analysis runs inline after review creation/update
+ *   - If analysis fails, the review is saved without sentiment data
+ *   - Sentiment is re-analyzed on review update (comment may have changed)
  */
 
 "use server";
@@ -16,6 +21,7 @@ import { revalidatePath } from "next/cache";
 
 import db from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
+import { analyzeSentiment } from "@/lib/ai";
 import {
   createReviewSchema,
   reviewSchema,
@@ -30,6 +36,53 @@ type ActionResult = {
 };
 
 /**
+ * Runs sentiment analysis on a review comment and updates the review record.
+ *
+ * This is a fire-and-update helper — it never throws. If sentiment analysis
+ * fails for any reason, the review remains unchanged (sentimentLabel and
+ * sentimentScore stay null).
+ *
+ * Called after review creation and after review update (in case the comment
+ * changed, the sentiment should be re-evaluated).
+ *
+ * @param reviewId - The review to analyze and update
+ * @param comment - The review comment text (may be null or empty)
+ */
+async function analyzeAndUpdateSentiment(
+  reviewId: string,
+  comment: string | null | undefined
+): Promise<void> {
+  // Skip analysis if there's no comment text
+  if (!comment || comment.trim().length === 0) {
+    // Clear any existing sentiment if the comment was removed
+    await db.review.update({
+      where: { id: reviewId },
+      data: {
+        sentimentLabel: null,
+        sentimentScore: null,
+      },
+    });
+    return;
+  }
+
+  // Run sentiment analysis (returns null on failure)
+  const sentiment = await analyzeSentiment(comment);
+
+  if (sentiment) {
+    // Update the review with sentiment results
+    await db.review.update({
+      where: { id: reviewId },
+      data: {
+        sentimentLabel: sentiment.label,
+        sentimentScore: sentiment.score,
+      },
+    });
+  }
+  // If sentiment is null (API failure), we simply don't update.
+  // The review keeps sentimentLabel: null and sentimentScore: null.
+}
+
+/**
  * Creates a new review for a completed booking.
  *
  * Pre-conditions:
@@ -37,6 +90,9 @@ type ActionResult = {
  *   - Booking exists and belongs to the user
  *   - Booking status is COMPLETED
  *   - No review exists for this booking yet
+ *
+ * After creation, sentiment analysis runs inline. If analysis fails,
+ * the review is still saved successfully — sentiment is best-effort.
  *
  * @param values - Review data (bookingId, rating, comment)
  * @returns Object with `success` or `error` message
@@ -98,7 +154,7 @@ export async function createReview(
     }
 
     // Create the review
-    await db.review.create({
+    const review = await db.review.create({
       data: {
         customerId: user.id,
         businessId: booking.businessId,
@@ -107,6 +163,9 @@ export async function createReview(
         comment: comment || null,
       },
     });
+
+    // Run sentiment analysis (best-effort, non-blocking on failure)
+    await analyzeAndUpdateSentiment(review.id, comment);
 
     // Revalidate relevant pages
     revalidatePath("/bookings");
@@ -128,6 +187,9 @@ export async function createReview(
  * Pre-conditions:
  *   - User is authenticated
  *   - Review exists and belongs to the user
+ *
+ * After update, sentiment is re-analyzed to reflect any changes
+ * in the comment text.
  *
  * @param reviewId - The ID of the review to update
  * @param values - Updated review data (rating, comment)
@@ -176,9 +238,13 @@ export async function updateReview(
       },
     });
 
+    // Re-analyze sentiment with the updated comment
+    await analyzeAndUpdateSentiment(reviewId, comment);
+
     // Revalidate relevant pages
     revalidatePath("/bookings");
     revalidatePath(`/bookings/${review.bookingId}`);
+    revalidatePath("/dashboard/reviews");
 
     return { success: "Review updated successfully!" };
   } catch (error) {

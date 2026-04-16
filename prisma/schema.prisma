@@ -534,7 +534,12 @@ model StaffHours {
 /// A customer review for a business, tied to a specific completed booking.
 /// Linking reviews to booking ensures only customers who actually received
 /// the service can leave feedback. One review per booking is enforced by
-/// the unique constraint on the bookingId
+/// the unique constraint on the bookingId.
+///
+/// Sentiment analysis:
+///   - sentimentLabel: "positive" | "neutral" | "negative" (from Hugging Face)
+///   - sentimentScore: 0.0 to 1.0 confidence score
+///   - Both are nullable — null means analysis was not performed or failed
 model Review {
   id String @id @default(cuid())
   customerId String
@@ -542,6 +547,8 @@ model Review {
   bookingId String @unique // One review per booking
   rating Int // Integer rating from 1 to 5 (validate at application level)
   comment String? @db.Text
+  sentimentLabel String? // "positive" | "neutral" | "negative" — AI generated
+  sentimentScore Float? // 0.0 to 1.0 confidence score — AI generated
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -554,6 +561,7 @@ model Review {
   @@index([businessId]) // All reviews for a business
   @@index([customerId]) // All reviews by a customer
   @@index([rating]) // Filter or sort by rating
+  @@index([sentimentLabel]) // Filter by sentiment
   @@map("reviews")
 }
 

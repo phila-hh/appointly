@@ -6,6 +6,7 @@
  *   - Business reviews with pagination and sorting
  *   - Average rating calculation
  *   - Rating distribution (count of 1-star, 2-star, etc.)
+ *   - Sentiment distribution (count of positive, neutral, negative)
  *   - Customer's own reviews
  */
 
@@ -15,6 +16,8 @@ import { Prisma } from "@/generated/prisma/client";
 
 /**
  * Fetches reviews for a specific business with pagination and sorting.
+ *
+ * Includes sentiment data (label and score) for each review.
  *
  * @param businessId - The business to fetch reviews for
  * @param options - Pagination and sorting options
@@ -33,7 +36,7 @@ export async function getBusinessReviews(
   const skip = (page - 1) * limit;
 
   // Determine sort order
-  let orderBy: Prisma.ReviewOrderByWithRelationInput = { createdAt: "desc" }; // Default: newest first
+  let orderBy: Prisma.ReviewOrderByWithRelationInput = { createdAt: "desc" };
   if (sortBy === "oldest") orderBy = { createdAt: "asc" };
   if (sortBy === "highest") orderBy = { rating: "desc" };
   if (sortBy === "lowest") orderBy = { rating: "asc" };
@@ -135,6 +138,53 @@ export async function getRatingDistribution(businessId: string) {
 }
 
 /**
+ * Gets the sentiment distribution for a business.
+ * Returns count of reviews for each sentiment label.
+ *
+ * Only counts reviews that have been analyzed (sentimentLabel is not null).
+ *
+ * @param businessId - The business to get sentiment distribution for
+ * @returns Object with counts for each sentiment and total analyzed
+ */
+export async function getSentimentDistribution(businessId: string) {
+  const sentiments = await db.review.groupBy({
+    by: ["sentimentLabel"],
+    where: {
+      businessId,
+      sentimentLabel: { not: null },
+    },
+    _count: {
+      sentimentLabel: true,
+    },
+  });
+
+  // Initialize all sentiments to 0
+  const distribution = {
+    positive: 0,
+    neutral: 0,
+    negative: 0,
+  };
+
+  // Fill in actual counts
+  sentiments.forEach((item) => {
+    const label = item.sentimentLabel as string;
+    if (label in distribution) {
+      distribution[label as keyof typeof distribution] =
+        item._count.sentimentLabel;
+    }
+  });
+
+  // Total number of reviews with sentiment data
+  const totalAnalyzed =
+    distribution.positive + distribution.neutral + distribution.negative;
+
+  return {
+    ...distribution,
+    totalAnalyzed,
+  };
+}
+
+/**
  * Fetches all reviews written by the current customer.
  *
  * @returns Array of reviews with related business and booking info
@@ -170,20 +220,24 @@ export async function getCustomerReviews() {
 
 /**
  * Gets review statistics for a business.
+ * Includes rating distribution and sentiment distribution.
  *
  * @param businessId - The business to get stats for
- * @returns Object with total count, average rating, and distribution
+ * @returns Object with total count, average rating, distribution, and sentiment
  */
 export async function getReviewStats(businessId: string) {
-  const [totalCount, averageRating, distribution] = await Promise.all([
-    db.review.count({ where: { businessId } }),
-    getAverageRating(businessId),
-    getRatingDistribution(businessId),
-  ]);
+  const [totalCount, averageRating, distribution, sentimentDistribution] =
+    await Promise.all([
+      db.review.count({ where: { businessId } }),
+      getAverageRating(businessId),
+      getRatingDistribution(businessId),
+      getSentimentDistribution(businessId),
+    ]);
 
   return {
     totalCount,
     averageRating,
     distribution,
+    sentimentDistribution,
   };
 }
