@@ -6,10 +6,11 @@
  * Capabilities:
  *   - Review sentiment analysis (Hugging Face)
  *   - Natural language search intent extraction (OpenRouter)
+ *   - Business Chatbot (OpenRouter)
  *
  * Providers:
  *   - Hugging Face inference API — sentiment analysis
- *   - OpenRouter API — LLM-powered search intent extraction
+ *   - OpenRouter API — LLM-powered search intent extraction and chat
  *
  * Error handling philosophy:
  *   - All functions are designed to fail gracefully
@@ -77,6 +78,30 @@ export interface SearchIntent {
 }
 
 // =============================================================================
+// Types — Chat Completion
+// =============================================================================
+
+/**
+ * A single message in a chat conversation.
+ * Uses the standard OpenAI-compatible role format.
+ */
+export interface ChatMessage {
+  /** The role of the message sender. */
+  role: "system" | "user" | "assistant";
+  /** The message content */
+  content: string;
+}
+
+/**
+ * Result of a chat completion request.
+ * Null is returned when the request fails.
+ */
+export interface ChatCompletionResult {
+  /** The assistant's response message */
+  content: string;
+}
+
+// =============================================================================
 // Constants — Hugging Face
 // =============================================================================
 
@@ -106,10 +131,11 @@ const MAX_TEXT_LENGTH = 1000;
 /** OpenRouter API base URL */
 const OPENROUTER_API_BASE = "https://openrouter.ai/api/v1/chat/completions";
 
-/**
- * The LLM model used for search intent extraction..
- */
+/** The LLM model used for search intent extraction..*/
 const SEARCH_INTENT_MODEL = "deepseek/deepseek-chat";
+
+/** The LLM model for business chatbot */
+const CHAT_MODEL = "deepseek/deepseek-chat";
 
 /** Request timeout for LLM calls (10 seconds) */
 const LLM_REQUEST_TIMEOUT_MS = 10000;
@@ -395,12 +421,11 @@ export async function extractSearchIntent(
     if (!response.ok) {
       if (response.status === 429) {
         console.warn("⚠️ OpenRouter rate limit reached — skipping AI search.");
-        return null;
+      } else {
+        console.warn(
+          `⚠️ OpenRouter API returned ${response.status} — skipping AI search.`
+        );
       }
-
-      console.warn(
-        `⚠️ OpenRouter API returned ${response.status} — skipping AI search.`
-      );
       return null;
     }
 
@@ -514,6 +539,87 @@ export async function extractSearchIntent(
     }
 
     console.warn("⚠️ AI search intent extraction failed — skipping:", error);
+    return null;
+  }
+}
+
+// =============================================================================
+// Chat Completion
+// =============================================================================
+
+/**
+ * Sends a chat completion request to OpenRouter.
+ *
+ * Takes a conversation history (array of messages with roles) and
+ * returns the assistant's response. The systems message should contain
+ * the business context built by the chat server action.
+ *
+ * @param messages - Full conversation history including system prompt
+ * @returns ChatCompletionResult with the assistant's response or null
+ */
+export async function chatCompletion(
+  messages: ChatMessage[]
+): Promise<ChatCompletionResult | null> {
+  try {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+
+    if (!apiKey) {
+      console.warn("⚠️ OPENROUTER_API_KEY not set — skipping chat completion.");
+      return null;
+    }
+
+    if (!messages || messages.length === 0) return null;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      LLM_REQUEST_TIMEOUT_MS
+    );
+
+    const response = await fetch(OPENROUTER_API_BASE, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Request": process.env.AUTH_URL || "http://localhost:3000",
+        "X-Title": "Appointly",
+      },
+      body: JSON.stringify({
+        model: CHAT_MODEL,
+        messages,
+        temperature: 0.5, // Balanced: helpful yet consistent
+        max_tokens: 400,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        console.warn("⚠️ OpenRouter rate limit — chat unavailable.");
+      } else {
+        console.warn(`⚠️ OpenRouter returned ${response.status} for`);
+      }
+      return null;
+    }
+
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content;
+
+    if (!content || typeof content !== "string") {
+      console.warn("⚠️ Empty chat response — skipping.");
+      return null;
+    }
+
+    return { content: content.trim() };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      console.warn("⚠️ Chat completion timed out.");
+      return null;
+    }
+
+    console.warn("⚠️ Chat completion failed:", error);
     return null;
   }
 }

@@ -1,15 +1,17 @@
 /**
  * @file Business Detail Page
- * @description Public-facing business profile page with services, team, and reviews.
+ * @description Public-facing business profile page with services, team,
+ * reviews, and AI chatbot.
  *
  * Features:
  *   - Business information (name, description, contact, hours)
  *   - Average rating and review count
  *   - List of active services with "Book Now" buttons
  *   - Team tab showing staff members (Phase 15B) — only if staff exist
- *   - Customer reviews with filtering
+ *   - Customer reviews with filtering and sentiment badges
  *   - Favorite button for customers
  *   - "Book with [Name]" deep-link per staff member
+ *   - AI chatbot widget — floating button + panel
  *
  * URL: /business/[slug]
  */
@@ -34,6 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FavoriteButton } from "@/components/shared/favorite-button";
 import { StarRating } from "@/components/shared/star-rating";
 import { ReviewList } from "@/components/shared/review-list";
+import { ChatWidget } from "@/components/shared/chat-widget";
 import { formatPrice, formatDuration } from "@/lib/utils";
 
 interface BusinessPageProps {
@@ -218,7 +221,6 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
                       <Card key={member.id}>
                         <CardContent className="p-6">
                           <div className="space-y-3">
-                            {/* Staff header */}
                             <div className="flex items-start justify-between gap-2">
                               <div>
                                 <h3 className="font-semibold">{member.name}</h3>
@@ -231,7 +233,6 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
                               <UserCog className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
                             </div>
 
-                            {/* Services this staff member performs */}
                             {member.services.length > 0 && (
                               <div className="space-y-1.5">
                                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -251,38 +252,20 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
                               </div>
                             )}
 
-                            {/* Book with this staff member — links per service */}
                             {member.services.length > 0 && (
                               <div className="pt-1">
-                                {member.services.length === 1 ? (
-                                  // Single service — direct book link
-                                  <Button
-                                    asChild
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full"
+                                <Button
+                                  asChild
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full"
+                                >
+                                  <Link
+                                    href={`/business/${business.slug}/book?service=${member.services[0].service.id}&staff=${member.id}`}
                                   >
-                                    <Link
-                                      href={`/business/${business.slug}/book?service=${member.services[0].service.id}&staff=${member.id}`}
-                                    >
-                                      Book with {member.name.split(" ")[0]}
-                                    </Link>
-                                  </Button>
-                                ) : (
-                                  // Multiple services — book with first service by default
-                                  <Button
-                                    asChild
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full"
-                                  >
-                                    <Link
-                                      href={`/business/${business.slug}/book?service=${member.services[0].service.id}&staff=${member.id}`}
-                                    >
-                                      Book with {member.name.split(" ")[0]}
-                                    </Link>
-                                  </Button>
-                                )}
+                                    Book with {member.name.split(" ")[0]}
+                                  </Link>
+                                </Button>
                               </div>
                             )}
                           </div>
@@ -401,6 +384,16 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
           </div>
         </div>
       </div>
+
+      {/* AI Chatbot Widget — Phase 16C */}
+      <ChatWidget
+        businessContext={{
+          businessId: business.id,
+          slug: business.slug,
+          name: business.name,
+        }}
+        isAuthenticated={!!user}
+      />
     </div>
   );
 }

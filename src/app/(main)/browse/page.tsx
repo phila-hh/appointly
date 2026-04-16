@@ -5,7 +5,7 @@
  * This is a Server Component that:
  *   1. Reads filter parameters from the URL search params
  *   2. Queries the database for matching businesses
- *   3. Renders the AI search bar (Phase 16B), filter bar, business cards
+ *   3. Renders the AI search bar, filter bar, business cards
  *      grid, and pagination
  *
  * URL: /browse
