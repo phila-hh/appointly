@@ -17,12 +17,17 @@ import { hash, compare } from "bcryptjs";
 
 import db from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
+import { Prisma } from "@/generated/prisma/client";
 import {
   updateProfileSchema,
   changePasswordSchema,
   type UpdateProfileValues,
   type ChangePasswordValues,
 } from "@/lib/validators/profile";
+import {
+  parseEmailPreferences,
+  type EmailPreferences,
+} from "@/lib/email-utils";
 
 /** Standard result type for profile actions. */
 type ActionResult = {
@@ -156,4 +161,82 @@ export async function changePassword(
     console.error("Change password error:", error);
     return { error: "Something went wrong. Please try again." };
   }
+}
+
+/**
+ * Updates the current user's email preferences.
+ *
+ * Only optional email types can be updated. The function merges the
+ * provided updates with existing preferences, preserving any keys
+ * not explicitly changed.
+ *
+ * @param updates - Partial email preferences to update
+ * @returns Object with `success` or `error` message
+ */
+export async function updateEmailPreferences(
+  updates: Partial<EmailPreferences>
+): Promise<ActionResult> {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return { error: "Please sign in." };
+    }
+
+    // Fetch current preferences from database
+    const dbUser = await db.user.findUnique({
+      where: { id: user.id },
+      select: { emailPreferences: true },
+    });
+
+    if (!dbUser) {
+      return { error: "User not found." };
+    }
+
+    // Merge existing preferences with updates
+    const currentPreferences = parseEmailPreferences(dbUser.emailPreferences);
+    const updatedPreferences: EmailPreferences = {
+      ...currentPreferences,
+      ...updates,
+    };
+
+    // Persist to database
+    await db.user.update({
+      where: { id: user.id },
+      data: {
+        emailPreferences:
+          updatedPreferences as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    revalidatePath("/profile");
+
+    return { success: "Email preferences updated." };
+  } catch (error) {
+    console.error("Update email preferences error:", error);
+    return { error: "Something went wrong. Please try again." };
+  }
+}
+
+/**
+ * Fetches the current user's email preferences.
+ *
+ * @returns Fully populated EmailPreferences with defaults for missing keys
+ */
+export async function getEmailPreferences(): Promise<EmailPreferences> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return {
+      bookingReminders: true,
+      reviewRequests: true,
+      marketingEmails: true,
+    };
+  }
+
+  const dbUser = await db.user.findUnique({
+    where: { id: user.id },
+    select: { emailPreferences: true },
+  });
+
+  return parseEmailPreferences(dbUser?.emailPreferences);
 }

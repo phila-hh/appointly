@@ -1,15 +1,13 @@
 /**
- *  @file Authentication Server Actions
- * @description Server-side functions for user registration and login.
+ * @file Authentication Server Actions
+ * @description Server-side functions for user registration, login,
+ * and email verification.
  *
- * Server Actions are marked with "use server" and run exclusively on the
- * server. They can be called from client components (forms, buttons) but
- * the code itself never reaches the browser. This is where we safely:
- *   - Access the database
- *   - Hash passwords
- *   - Create sessions
- *
- * @see https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations
+ * Features:
+ *   - signUp no longer sets emailVerified (user must verify via email)
+ *   - signUp sends a verification email after creating the account
+ *   - New resendVerification action for re-sending the verification email
+ *   - login checks email verification status for credential users
  */
 
 "use server";
@@ -19,6 +17,12 @@ import { hash } from "bcryptjs";
 
 import { signIn } from "@/lib/auth";
 import db from "@/lib/db";
+import { sendEmail } from "@/lib/email";
+import {
+  generateVerificationToken,
+  buildVerificationUrl,
+} from "@/lib/email-utils";
+import { renderVerifyEmail } from "@/emails/verify-email";
 import {
   signUpSchema,
   signInSchema,
@@ -28,8 +32,6 @@ import {
 
 /**
  * Result type for auth actions.
- * Every action returns either a success or an error message.
- * This consistent shape makes it easy for the UI to handle responses.
  */
 type AuthActionResult = {
   success?: string;
@@ -37,24 +39,23 @@ type AuthActionResult = {
 };
 
 /**
- * Register a new user account
+ * Register a new user account.
  *
  * Flow:
- *   1. Validate input with Zod schema (server-side revalidation)
+ *   1. Validate input with Zod schema
  *   2. Check if email is already registered
  *   3. Hash the password with bcrypt
- *   4. Create the user in the database
- *   5. Return success (client will redirect to sign-in)
+ *   4. Create the user (emailVerified = null)
+ *   5. Send verification email
+ *   6. Return success
  *
- * @param values - The sign-up form data (name, email, password, confirmPassword, role)
+ * @param values - The sign-up form data
  * @returns Object with `success` or `error` message
  */
 export async function signUp(
   values: SignUpFormValues
 ): Promise<AuthActionResult> {
   try {
-    // Step 1: Re-validate on the server, NEVER trust client-side validation
-    // A malicious user could bypass the form and send raw requests
     const validatedFields = signUpSchema.safeParse(values);
 
     if (!validatedFields.success) {
@@ -63,7 +64,7 @@ export async function signUp(
 
     const { name, email, password, role } = validatedFields.data;
 
-    // Step 2: Check if the email is already registered
+    // Check if the email is already registered
     const existingUser = await db.user.findUnique({
       where: { email },
     });
@@ -72,23 +73,44 @@ export async function signUp(
       return { error: "An account with this email already exists." };
     }
 
-    // Step 3: Hash the password. The second argument (10) is the "cost factor"
-    // or "salt rounds". Higher = more secure but slower. 10 is the standard
-    // balance between security and performance (~ 10 hashes/second).
+    // Hash the password
     const hashedPassword = await hash(password, 10);
 
-    // Step 4: Create the user in the database
+    // Create the user WITHOUT setting emailVerified
     await db.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
         role,
-        emailVerified: new Date(), // Mark as verified (Email verification to be implemented in the future)
+        // emailVerified is null by default — user must verify via email
       },
     });
 
-    return { success: "Account created successfully! Please sign in." };
+    // Send verification email (fire-and-forget — don't block sign-up on failure)
+    try {
+      const token = generateVerificationToken(email);
+      const verificationUrl = buildVerificationUrl(token);
+
+      const html = await renderVerifyEmail({
+        userName: name,
+        verificationUrl,
+      });
+
+      await sendEmail({
+        to: email,
+        subject: "Verify your email — Appointly",
+        html,
+      });
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError);
+      // Don't fail the sign-up — the user can request a new email later
+    }
+
+    return {
+      success:
+        "Account created! Please check your email to verify your address.",
+    };
   } catch (error) {
     console.error("Sign-up error:", error);
     return { error: "Something went wrong. Please try again." };
@@ -96,27 +118,18 @@ export async function signUp(
 }
 
 /**
- * Authenticate user with email and password
+ * Authenticate user with email and password.
  *
- * Flow:
- *   1. Validate input with Zod schema
- *   2. Look up the user to determine their role (for redirect)
- *   3. Call NextAuth's signIn with credentials
- *   4. On success: user is redirected (signIn handles this via redirect)
- *   5. On failure: return error message
+ * Checks email verification status before allowing sign-in.
+ * Unverified users are prompted to check their email.
  *
- * Note: When signIn() succeeds, it internally throws a NEXT_REDIRECT
- * error to trigger Next.js navigation. We must re-throw this (which
- * the final `throw error` in the catch block does).
- *
- * @param values - The sign-in form data (email, password)
- * @returns Object with `error` message on failure (success causes a redirect)
+ * @param values - The sign-in form data
+ * @returns Object with `error` message on failure (success causes redirect)
  */
 export async function login(
   values: SignInFormValues
 ): Promise<AuthActionResult> {
   try {
-    // Step 1: Validate input
     const validatedFields = signInSchema.safeParse(values);
 
     if (!validatedFields.success) {
@@ -125,12 +138,28 @@ export async function login(
 
     const { email, password } = validatedFields.data;
 
-    // Step 2: Look up the user to determine redirect destination
-    // We do this before signIn so we know where to send them.
+    // Look up the user to check verification status and role
     const user = await db.user.findUnique({
       where: { email },
-      select: { role: true }, // Only fetch the role field (efficient)
+      select: { role: true, emailVerified: true, password: true },
     });
+
+    // Check if the user has a password (credential account)
+    // OAuth users won't have a password — they should use Google sign-in
+    if (user && !user.password) {
+      return {
+        error:
+          "This account uses Google sign-in. Please use the 'Continue with Google' button.",
+      };
+    }
+
+    // Check email verification for credential users
+    if (user && !user.emailVerified) {
+      return {
+        error:
+          "Please verify your email address before signing in. Check your inbox for the verification link.",
+      };
+    }
 
     // Determine where to redirect after successful login
     const redirectTo =
@@ -140,18 +169,15 @@ export async function login(
           ? "/dashboard/overview"
           : "/browse";
 
-    // Step 3: Attempt to sign in via NextAuth's credentials provider.
-    // This calls the `authorize` function we defined in auth.ts
+    // Attempt sign-in via NextAuth
     await signIn("credentials", {
       email,
       password,
       redirectTo,
     });
 
-    // This line is never reached on success (signIn redirects).
     return { success: "Signed in successfully!" };
   } catch (error) {
-    // NextAuth throws AuthError for authentication failures.
     if (error instanceof AuthError) {
       switch (error.type) {
         case "CredentialsSignin":
@@ -161,9 +187,64 @@ export async function login(
       }
     }
 
-    // Re-throw non-auth errors (including NEXT_REDIRECT).
-    // The redirect "error" is how Next.js handles navigation internally.
-    // If we catch and suppress it, the redirect won't happen.
+    // Re-throw non-auth errors (including NEXT_REDIRECT)
     throw error;
+  }
+}
+
+/**
+ * Resends the verification email to a user.
+ *
+ * Used when a user's verification link has expired or was lost.
+ *
+ * @param email - The email address to resend verification to
+ * @returns Object with `success` or `error` message
+ */
+export async function resendVerificationEmail(
+  email: string
+): Promise<AuthActionResult> {
+  try {
+    if (!email || !email.includes("@")) {
+      return { error: "Please enter a valid email address." };
+    }
+
+    const user = await db.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+      select: { name: true, email: true, emailVerified: true },
+    });
+
+    if (!user) {
+      // Don't reveal whether the email exists (security)
+      return {
+        success:
+          "If an account exists with this email, a verification link has been sent.",
+      };
+    }
+
+    if (user.emailVerified) {
+      return { error: "This email is already verified. You can sign in." };
+    }
+
+    // Generate and send new verification email
+    const token = generateVerificationToken(user.email);
+    const verificationUrl = buildVerificationUrl(token);
+
+    const html = await renderVerifyEmail({
+      userName: user.name ?? "there",
+      verificationUrl,
+    });
+
+    await sendEmail({
+      to: user.email,
+      subject: "Verify your email — Appointly",
+      html,
+    });
+
+    return {
+      success: "Verification email sent! Please check your inbox.",
+    };
+  } catch (error) {
+    console.error("Resend verification error:", error);
+    return { error: "Something went wrong. Please try again." };
   }
 }

@@ -2,15 +2,10 @@
  * @file Profile Page
  * @description Customer profile management page.
  *
- * Features:
- *   - View and edit profile information (name, email, phone)
- *   - Change password
- *   - View avatar with initials
- *
- * Future enhancements:
- *   - Avatar image upload
- *   - Account deletion
- *   - Email verification status
+ * Sections:
+ *   - Personal information (name, email, phone)
+ *   - Change password (credential users only)
+ *   - Email notification preferences
  *
  * URL: /profile
  */
@@ -18,14 +13,14 @@
 import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/session";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { UserAvatar } from "@/components/shared/user-avatar";
+import { getEmailPreferences } from "@/lib/actions/profile";
 import { ProfileForm } from "@/components/forms/profile-form";
 import { ChangePasswordForm } from "@/components/forms/change-password-form";
+import { EmailPreferences } from "@/components/shared/email-preferences";
+import db from "@/lib/db";
 
 export const metadata = {
-  title: "Profile Settings",
+  title: "Profile",
 };
 
 export default async function ProfilePage() {
@@ -35,79 +30,72 @@ export default async function ProfilePage() {
     redirect("/sign-in");
   }
 
-  // Prepare initial data for the profile form
-  const profileData = {
-    name: user.name ?? "",
-    email: user.email ?? "",
-    phone: "", // Phone is not in the session, we'll fetch it separately
-  };
-
-  // Fetch the full user record to get the phone number
-  // (Session doesn't include phone to keep JWT payload small)
-  const db = (await import("@/lib/db")).default;
-  const fullUser = await db.user.findUnique({
+  // Fetch full user data for the profile form
+  const dbUser = await db.user.findUnique({
     where: { id: user.id },
-    select: { phone: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      image: true,
+      password: true, // Check if credential user (has password)
+    },
   });
 
-  if (fullUser?.phone) {
-    profileData.phone = fullUser.phone;
+  if (!dbUser) {
+    redirect("/sign-in");
   }
 
+  // Fetch email preferences separately
+  const emailPreferences = await getEmailPreferences();
+
+  /** Whether the user signed up with credentials (has a password). */
+  const isCredentialUser = !!dbUser.password;
+
   return (
-    <div className="container mx-auto px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-      <div className="mx-auto max-w-2xl space-y-8">
+    <div className="container mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
+      <div className="space-y-8">
         {/* Page header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Profile Settings
           </h1>
-          <p className="mt-2 text-muted-foreground">
-            Manage your account information and preferences.
+          <p className="mt-1 text-muted-foreground">
+            Manage your account information and notification preferences.
           </p>
         </div>
 
-        {/* Avatar section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile Picture</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <UserAvatar
-                name={user.name}
-                image={user.image}
-                className="h-20 w-20 text-2xl"
-              />
-              <div className="text-sm text-muted-foreground">
-                <p>Avatar images are currently generated from your initials.</p>
-                <p className="mt-1">Image upload coming soon.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Personal information */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold">Personal Information</h2>
+          <ProfileForm
+            initialData={{
+              name: dbUser.name ?? "",
+              email: dbUser.email,
+              phone: dbUser.phone ?? "",
+            }}
+          />
+        </section>
 
-        {/* Profile information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ProfileForm initialData={profileData} />
-          </CardContent>
-        </Card>
-
-        <Separator />
-
-        {/* Password change */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Change Password</CardTitle>
-          </CardHeader>
-          <CardContent>
+        {/* Change password — only for credential users */}
+        {isCredentialUser && (
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold">Change Password</h2>
             <ChangePasswordForm />
-          </CardContent>
-        </Card>
+          </section>
+        )}
+
+        {/* Email preferences */}
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Email Notifications</h2>
+            <p className="text-sm text-muted-foreground">
+              Choose which emails you&apos;d like to receive from Appointly.
+            </p>
+          </div>
+          <EmailPreferences initialPreferences={emailPreferences} />
+        </section>
       </div>
     </div>
   );

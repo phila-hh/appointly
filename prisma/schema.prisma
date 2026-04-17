@@ -130,6 +130,7 @@ model User {
   password String?  // Hashed password for credential-based authentication
   phone String?
   role Role @default(CUSTOMER)
+  emailPreferences Json? // { bookingRemainders: true, reviewRequests: true, marketingEmails: true }
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

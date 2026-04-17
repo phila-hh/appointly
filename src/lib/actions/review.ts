@@ -29,7 +29,6 @@ import {
   type ReviewFormValues,
 } from "@/lib/validators/review";
 
-/** Standard result type for review actions. */
 type ActionResult = {
   success?: string;
   error?: string;
@@ -37,39 +36,23 @@ type ActionResult = {
 
 /**
  * Runs sentiment analysis on a review comment and updates the review record.
- *
- * This is a fire-and-update helper — it never throws. If sentiment analysis
- * fails for any reason, the review remains unchanged (sentimentLabel and
- * sentimentScore stay null).
- *
- * Called after review creation and after review update (in case the comment
- * changed, the sentiment should be re-evaluated).
- *
- * @param reviewId - The review to analyze and update
- * @param comment - The review comment text (may be null or empty)
+ * Non-throwing — on failure the review stays without sentiment data.
  */
 async function analyzeAndUpdateSentiment(
   reviewId: string,
   comment: string | null | undefined
 ): Promise<void> {
-  // Skip analysis if there's no comment text
   if (!comment || comment.trim().length === 0) {
-    // Clear any existing sentiment if the comment was removed
     await db.review.update({
       where: { id: reviewId },
-      data: {
-        sentimentLabel: null,
-        sentimentScore: null,
-      },
+      data: { sentimentLabel: null, sentimentScore: null },
     });
     return;
   }
 
-  // Run sentiment analysis (returns null on failure)
   const sentiment = await analyzeSentiment(comment);
 
   if (sentiment) {
-    // Update the review with sentiment results
     await db.review.update({
       where: { id: reviewId },
       data: {
@@ -78,21 +61,11 @@ async function analyzeAndUpdateSentiment(
       },
     });
   }
-  // If sentiment is null (API failure), we simply don't update.
-  // The review keeps sentimentLabel: null and sentimentScore: null.
 }
 
 /**
  * Creates a new review for a completed booking.
- *
- * Pre-conditions:
- *   - User is authenticated as CUSTOMER
- *   - Booking exists and belongs to the user
- *   - Booking status is COMPLETED
- *   - No review exists for this booking yet
- *
- * After creation, sentiment analysis runs inline. If analysis fails,
- * the review is still saved successfully — sentiment is best-effort.
+ * Triggers sentiment analysis (Phase 16A).
  *
  * @param values - Review data (bookingId, rating, comment)
  * @returns Object with `success` or `error` message
@@ -111,7 +84,6 @@ export async function createReview(
       return { error: "Only customers can leave reviews." };
     }
 
-    // Validate input
     const validatedFields = createReviewSchema.safeParse(values);
     if (!validatedFields.success) {
       return { error: "Invalid review data. Please check your input." };
@@ -119,33 +91,23 @@ export async function createReview(
 
     const { bookingId, rating, comment } = validatedFields.data;
 
-    // Fetch the booking with business info
     const booking = await db.booking.findUnique({
       where: { id: bookingId },
-      include: {
-        review: {
-          select: { id: true },
-        },
-      },
+      include: { review: { select: { id: true } } },
     });
 
     if (!booking) {
       return { error: "Booking not found." };
     }
 
-    // Verify ownership
     if (booking.customerId !== user.id) {
       return { error: "You can only review your own bookings." };
     }
 
-    // Check booking is completed
     if (booking.status !== "COMPLETED") {
-      return {
-        error: "You can only review completed appointments.",
-      };
+      return { error: "You can only review completed appointments." };
     }
 
-    // Check if review already exists
     if (booking.review) {
       return {
         error:
@@ -153,7 +115,6 @@ export async function createReview(
       };
     }
 
-    // Create the review
     const review = await db.review.create({
       data: {
         customerId: user.id,
@@ -164,10 +125,11 @@ export async function createReview(
       },
     });
 
-    // Run sentiment analysis (best-effort, non-blocking on failure)
-    await analyzeAndUpdateSentiment(review.id, comment);
+    // Sentiment analysis (Phase 16A — fire-and-forget)
+    analyzeAndUpdateSentiment(review.id, comment).catch((err) => {
+      console.error("Sentiment analysis error:", err);
+    });
 
-    // Revalidate relevant pages
     revalidatePath("/bookings");
     revalidatePath(`/bookings/${bookingId}`);
     revalidatePath("/dashboard/reviews");
@@ -183,16 +145,10 @@ export async function createReview(
 
 /**
  * Updates an existing review.
- *
- * Pre-conditions:
- *   - User is authenticated
- *   - Review exists and belongs to the user
- *
- * After update, sentiment is re-analyzed to reflect any changes
- * in the comment text.
+ * Re-runs sentiment analysis on the updated comment.
  *
  * @param reviewId - The ID of the review to update
- * @param values - Updated review data (rating, comment)
+ * @param values - Updated review data
  * @returns Object with `success` or `error` message
  */
 export async function updateReview(
@@ -206,7 +162,6 @@ export async function updateReview(
       return { error: "Please sign in." };
     }
 
-    // Fetch the review
     const review = await db.review.findUnique({
       where: { id: reviewId },
       select: { customerId: true, bookingId: true },
@@ -216,12 +171,10 @@ export async function updateReview(
       return { error: "Review not found." };
     }
 
-    // Verify ownership
     if (review.customerId !== user.id) {
       return { error: "You can only edit your own reviews." };
     }
 
-    // Validate input
     const validatedFields = reviewSchema.safeParse(values);
     if (!validatedFields.success) {
       return { error: "Invalid review data. Please check your input." };
@@ -229,19 +182,16 @@ export async function updateReview(
 
     const { rating, comment } = validatedFields.data;
 
-    // Update the review
     await db.review.update({
       where: { id: reviewId },
-      data: {
-        rating,
-        comment: comment || null,
-      },
+      data: { rating, comment: comment || null },
     });
 
-    // Re-analyze sentiment with the updated comment
-    await analyzeAndUpdateSentiment(reviewId, comment);
+    // Re-analyze sentiment (fire-and-forget)
+    analyzeAndUpdateSentiment(reviewId, comment).catch((err) => {
+      console.error("Sentiment re-analysis error:", err);
+    });
 
-    // Revalidate relevant pages
     revalidatePath("/bookings");
     revalidatePath(`/bookings/${review.bookingId}`);
     revalidatePath("/dashboard/reviews");
@@ -256,10 +206,6 @@ export async function updateReview(
 /**
  * Deletes a review.
  *
- * Pre-conditions:
- *   - User is authenticated
- *   - Review exists and belongs to the user
- *
  * @param reviewId - The ID of the review to delete
  * @returns Object with `success` or `error` message
  */
@@ -271,7 +217,6 @@ export async function deleteReview(reviewId: string): Promise<ActionResult> {
       return { error: "Please sign in." };
     }
 
-    // Fetch the review
     const review = await db.review.findUnique({
       where: { id: reviewId },
       select: { customerId: true, bookingId: true },
@@ -281,17 +226,12 @@ export async function deleteReview(reviewId: string): Promise<ActionResult> {
       return { error: "Review not found." };
     }
 
-    // Verify ownership
     if (review.customerId !== user.id) {
       return { error: "You can only delete your own reviews." };
     }
 
-    // Delete the review
-    await db.review.delete({
-      where: { id: reviewId },
-    });
+    await db.review.delete({ where: { id: reviewId } });
 
-    // Revalidate relevant pages
     revalidatePath("/bookings");
     revalidatePath(`/bookings/${review.bookingId}`);
     revalidatePath("/dashboard/reviews");

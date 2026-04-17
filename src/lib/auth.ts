@@ -5,33 +5,24 @@
  * This file configures:
  *   - Prisma adapter (stores users/accounts in PostgreSQL)
  *   - Credentials provider (email + password authentication)
+ *   - Google OAuth provider (social sign-in)
  *   - JWT session strategy (stateless sessions via encrypted cookies)
  *   - Callbacks (enrich JWT and session with user role/id)
- *   - Custom page routes (our own sign-in page instead of NextAuth's default)
+ *   - Custom page routes
  *
- * Exports:
- *   - `handlers` — GET/POST route handlers for /api/auth/*
- *   - `auth`     — Server-side function to get the current session
- *   - `signIn`   — Server-side function to trigger sign-in
- *   - `signOut`  — Server-side function to trigger sign-out
- *
- * @example
- * ```ts
- * // In a Server Component:
- * import { auth } from "@/lib/auth";
- * const session = await auth();
- * console.log(session?.user.role); // "CUSTOMER" | "BUSINESS_OWNER"
- *
- * // In a Server Action:
- * import { signIn } from "@/lib/auth";
- * await signIn("credentials", { email, password, redirectTo: "/" });
- * ```
+ * OAuth Notes:
+ *   - Google sign-in creates a User record automatically via PrismaAdapter
+ *   - New Google users default to CUSTOMER role
+ *   - Google users have emailVerified set automatically by the adapter
+ *   - If a user signed up with credentials first, they can later link
+ *     their Google account (same email)
  *
  * @see https://authjs.dev/getting-started/installation?framework=next.js
  */
 
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { compare } from "bcryptjs";
 
@@ -42,25 +33,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   /**
    * Prisma Adapter
    * Connects NextAuth to our PostgreSQL database via Prisma.
-   * Handles creating/reading User, Account, Session, and
-   * VerificationToken records automatically.
    */
   adapter: PrismaAdapter(db),
 
   /**
    * Session Strategy
    * "jwt" = sessions are stored in an encrypted cookie, not in the database.
-   * This is REQUIRED when using the Credentials provider because the Prisma
-   * adapter's database session strategy doesn't work with Credentials.
-   *
-   * JWT is also more performant — no database query on every request.
+   * REQUIRED when using the Credentials provider.
    */
   session: { strategy: "jwt" },
 
   /**
    * Custom Pages
-   * Override NextAuth's default sign-in page with our own.
-   * Auth errors (wrong credentials, etc.) also redirect to our sign-in page.
    */
   pages: {
     signIn: "/sign-in",
@@ -69,21 +53,35 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   /**
    * Authentication Providers
-   * Currently: Credentials (email + password)
-   * Future: Could add Google, GitHub, etc. as additional providers.
    */
   providers: [
-    Credentials({
+    // -------------------------------------------------------------------------
+    // Google OAuth Provider
+    // -------------------------------------------------------------------------
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       /**
-       * Authorize callback — called when a user attempts to sign in.
-       *
-       * @param credentials - The email and password from the sign-in form
-       * @returns The user object if valid, or null to deny access
+       * By default, the PrismaAdapter creates users with no role field set.
+       * We use the `profile` callback to ensure new Google users get the
+       * CUSTOMER role. The adapter merges this into the User record.
        */
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+          role: "CUSTOMER", // Default role for OAuth sign-ups
+        };
+      },
+    }),
+
+    // -------------------------------------------------------------------------
+    // Credentials Provider (email + password)
+    // -------------------------------------------------------------------------
+    Credentials({
       async authorize(credentials) {
-        // Step 1: Validate the input shape with our Zod schema.
-        // safeParse returns { success: boolean, data?, error? } instead
-        // of throwing an exception.
         const validatedFields = signInSchema.safeParse(credentials);
 
         if (!validatedFields.success) {
@@ -92,29 +90,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const { email, password } = validatedFields.data;
 
-        // Step 2: Look up the user by email.
         const user = await db.user.findUnique({
           where: { email },
         });
 
-        // Step 3: Verify the user exists AND has a password.
-        // user.password could be null if they signed up via OAuth (Google, etc.)
-        // In that case, they can't use credentials to sign in.
         if (!user || !user.password) {
           return null;
         }
 
-        // Step 4: Compare the provided password with the stored hash.
-        // bcrypt.compare() handles the hashing internally — it extracts
-        // the salt from the stored hash and re-hashes the input to compare.
         const passwordsMatch = await compare(password, user.password);
 
         if (!passwordsMatch) {
           return null;
         }
 
-        // Step 5: Return the user object. These fields get passed to
-        // the jwt() callback below. Returning null would deny access.
         return {
           id: user.id,
           name: user.name,
@@ -128,39 +117,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   /**
    * Callbacks
-   * Functions that run at specific points in the auth lifecycle.
-   * Used to customize the JWT token and session data.
    */
   callbacks: {
     /**
      * JWT Callback
-     * Called whenever a JWT is created (sign-in) or read (every request).
+     * On sign-in: copy id and role into the token.
+     * On subsequent requests: token already has these fields.
      *
-     * On sign-in: `user` is available, so we copy id and role into the token.
-     * On subsequent requests: `user` is undefined, but the token already has
-     * our custom fields from the initial sign-in.
-     *
-     * @param token - The JWT being built or read
-     * @param user  - The user object (only available on sign-in)
-     * @returns The enriched JWT token
+     * For OAuth sign-ins, `user` is the profile returned by the provider.
+     * We need to fetch the role from the database since the OAuth profile
+     * callback sets a default but the user may have been updated since.
      */
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id as string;
         token.role = user.role;
       }
+
+      // On OAuth sign-in, the user object may not have the role from DB.
+      // Fetch it to ensure we have the correct role.
+      if (trigger === "signIn" && token.id) {
+        const dbUser = await db.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+        }
+      }
+
       return token;
     },
 
     /**
      * Session Callback
-     * Called whenever `auth()` or `useSession()` reads the session.
-     * Copies our custom fields from the JWT into the session object
-     * so they're accessible in components and server code.
-     *
-     * @param session - The session being built
-     * @param token   - The JWT containing our custom fields
-     * @returns The enriched session
+     * Copies custom fields from JWT into the session.
      */
     async session({ session, token }) {
       if (session.user) {

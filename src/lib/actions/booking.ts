@@ -10,11 +10,15 @@
  *   - Price snapshotting at booking time
  *   - Automatic Payment record creation with booking
  *
- * Phase 15B additions:
+ * Features:
  *   - createBooking now accepts optional staffId
  *   - If business has staff: validates staff, checks per-staff conflicts,
  *     and runs round-robin assignment for "any available" bookings
- *   - Businesses without staff are completely unaffected (backwards compatible)
+ *   - Businesses without staff are completely unaffected (backwards compatible)\
+ *   - createBooking sends booking confirmation to customer (fire-and-forget)
+ *   - createBooking sends new booking notification to business owner
+ *   - updateBookingStatus sends cancellation emails when status → CANCELLED
+ *   - updateBookingStatus sends review request when status → COMPLETED
  */
 
 "use server";
@@ -36,8 +40,14 @@ import {
   getCancellationDeadline,
   selectStaffRoundRobin,
 } from "@/lib/booking-utils";
+import {
+  sendBookingConfirmationEmail,
+  sendNewBookingNotificationEmail,
+  sendBookingCancelledEmails,
+  sendReviewRequestEmail,
+} from "@/lib/email-service";
 
-/** Result type for booking creation — includes bookingId for payment redirect. */
+/** Result type for booking creation. */
 type BookingActionResult = {
   success?: string;
   error?: string;
@@ -53,22 +63,9 @@ interface ActionResult {
 /**
  * Create a new booking with an associated payment record.
  *
- * Flow (single-provider — no staff):
- *   1. Validate user is authenticated as CUSTOMER
- *   2. Validate input with Zod schema
- *   3. Verify the service exists and belongs to the business
- *   4. Check for time-slot conflicts against all business bookings
- *   5. Snapshot the service price
- *   6. Create booking (PENDING) and payment (PENDING) in a transaction
- *   7. Return the bookingId for redirection to payment page
- *
- * Flow (multi-provider — staff configured):
- *   1–3. Same as above
- *   4a. If specific staffId provided → validate staff can perform service,
- *       check conflicts only for that staff member
- *   4b. If no staffId (any available) → run round-robin to select staff
- *       from the slot's availableStaffIds
- *   5–7. Same as above, with staffId stored on the booking
+ * After successful creation, fires email notifications (non-blocking):
+ *   - Customer receives booking confirmation with payment link
+ *   - Business owner receives new booking notification
  *
  * @param values - Booking form data (including optional staffId)
  * @returns Object with `success`, `error`, and optionally `bookingId`
@@ -87,7 +84,7 @@ export async function createBooking(
       return { error: "Only customers can book appointments." };
     }
 
-    // Step 1: Validate input
+    // Validate input
     const validatedFields = createBookingSchema.safeParse(values);
     if (!validatedFields.success) {
       return { error: "Invalid booking data. Please check your input." };
@@ -103,10 +100,9 @@ export async function createBooking(
       staffId: requestedStaffId,
     } = validatedFields.data;
 
-    // Normalize empty string staffId to null
     const staffIdInput = requestedStaffId || null;
 
-    // Step 2: Verify service exists, is active, and belongs to the business
+    // Verify service exists, is active, and belongs to the business
     const service = await db.service.findUnique({
       where: { id: serviceId },
       select: {
@@ -126,42 +122,32 @@ export async function createBooking(
       return { error: "Service does not belong to this business." };
     }
 
-    // Step 3: Parse the booking date
     const bookingDate = new Date(date);
     const requestedStart = timeToMinutes(startTime);
     const requestedEnd = timeToMinutes(endTime);
 
-    // Step 4: Check if this business has active staff for this service
+    // Check if business has active staff for this service
     const staffForService = await db.staff.findMany({
       where: {
         businessId,
         isActive: true,
-        services: {
-          some: { serviceId },
-        },
+        services: { some: { serviceId } },
       },
       select: { id: true },
     });
 
     const businessHasStaff = staffForService.length > 0;
-
-    // -------------------------------------------------------------------------
-    // Conflict detection + staff assignment (staff-aware path)
-    // -------------------------------------------------------------------------
     let assignedStaffId: string | null = null;
 
     if (businessHasStaff) {
       if (staffIdInput) {
-        // Specific staff requested — validate they can perform the service
         const isEligible = staffForService.some((s) => s.id === staffIdInput);
-
         if (!isEligible) {
           return {
             error: "The selected staff member cannot perform this service.",
           };
         }
 
-        // Check for conflicts with this specific staff member's bookings
         const staffBookings = await db.booking.findMany({
           where: {
             staffId: staffIdInput,
@@ -183,14 +169,12 @@ export async function createBooking(
         if (hasStaffConflict) {
           return {
             error:
-              "This staff member is no longer available at the selected time. Please choose another time or staff member.",
+              "This staff member is no longer available at the selected time.",
           };
         }
 
         assignedStaffId = staffIdInput;
       } else {
-        // "Any Available" mode — find which staff are free for this slot
-        // by checking each staff member's bookings individually
         const availableStaffIds: string[] = [];
 
         for (const staff of staffForService) {
@@ -212,7 +196,6 @@ export async function createBooking(
             )
           );
 
-          // Also check staff has hours for this day
           const bookingDayOfWeek = [
             "SUNDAY",
             "MONDAY",
@@ -239,9 +222,7 @@ export async function createBooking(
             },
           });
 
-          const isWorkingThisDay = staffHours && !staffHours.isClosed;
-
-          if (isAvailable && isWorkingThisDay) {
+          if (isAvailable && staffHours && !staffHours.isClosed) {
             availableStaffIds.push(staff.id);
           }
         }
@@ -253,7 +234,6 @@ export async function createBooking(
           };
         }
 
-        // Run round-robin to pick the staff member with fewest bookings today
         assignedStaffId = await selectStaffRoundRobin(
           availableStaffIds,
           bookingDate,
@@ -261,9 +241,7 @@ export async function createBooking(
         );
       }
     } else {
-      // -----------------------------------------------------------------------
-      // Conflict detection (single-provider path — original logic unchanged)
-      // -----------------------------------------------------------------------
+      // Single-provider conflict detection
       const existingBookings = await db.booking.findMany({
         where: {
           businessId,
@@ -290,7 +268,7 @@ export async function createBooking(
       }
     }
 
-    // Step 5: Create booking AND payment atomically in a transaction
+    // Create booking AND payment atomically
     const booking = await db.$transaction(async (tx) => {
       const newBooking = await tx.booking.create({
         data: {
@@ -310,7 +288,6 @@ export async function createBooking(
         },
       });
 
-      // Create the associated payment record (PENDING, no Chapa ref yet)
       await tx.payment.create({
         data: {
           bookingId: newBooking.id,
@@ -322,9 +299,21 @@ export async function createBooking(
       return newBooking;
     });
 
-    // Revalidate relevant paths
+    // Revalidate
     revalidatePath("/bookings");
     revalidatePath("/dashboard/bookings");
+
+    // -------------------------------------------------------------------------
+    // Fire-and-forget email notifications
+    // -------------------------------------------------------------------------
+    // These run after the booking is created. If they fail, the booking
+    // is still created successfully.
+    Promise.all([
+      sendBookingConfirmationEmail(booking.id),
+      sendNewBookingNotificationEmail(booking.id),
+    ]).catch((err) => {
+      console.error("Booking email notification error:", err);
+    });
 
     return {
       success: "Booking created! Proceed to payment.",
@@ -339,13 +328,9 @@ export async function createBooking(
 /**
  * Updates a booking's status.
  *
- * Used by both business owners (confirm, complete, no-show, cancel)
- * and customers (cancel).
- *
- * Validates:
- *   - User is authenticated
- *   - User has permission (is the customer or the business owner)
- *   - The status transition is valid per VALID_STATUS_TRANSITIONS
+ * Email triggers:
+ *   - CANCELLED → send cancellation emails to both parties
+ *   - COMPLETED → send review request to the customer
  *
  * @param values - Booking ID and new status
  * @returns Object with `success` or `error` message
@@ -359,7 +344,6 @@ export async function updateBookingStatus(
       return { error: "Please sign in." };
     }
 
-    // Validate input
     const validatedFields = updateBookingStatusSchema.safeParse(values);
     if (!validatedFields.success) {
       return { error: "Invalid request." };
@@ -367,7 +351,6 @@ export async function updateBookingStatus(
 
     const { bookingId, status: newStatus } = validatedFields.data;
 
-    // Fetch the booking with business ownership info
     const booking = await db.booking.findUnique({
       where: { id: bookingId },
       include: {
@@ -381,7 +364,6 @@ export async function updateBookingStatus(
       return { error: "Booking not found." };
     }
 
-    // Check permission: must be the customer or the business owner
     const isCustomer = booking.customerId === user.id;
     const isOwner = booking.business.ownerId === user.id;
 
@@ -389,12 +371,10 @@ export async function updateBookingStatus(
       return { error: "You do not have permission to update this booking." };
     }
 
-    // Customer can only cancel their bookings
     if (isCustomer && !isOwner && newStatus !== "CANCELLED") {
       return { error: "You can only cancel your bookings." };
     }
 
-    // Validate the status transition
     const allowedTransitions = VALID_STATUS_TRANSITIONS[booking.status] ?? [];
     if (!allowedTransitions.includes(newStatus)) {
       return {
@@ -402,15 +382,32 @@ export async function updateBookingStatus(
       };
     }
 
-    // Update the status
     await db.booking.update({
       where: { id: bookingId },
       data: { status: newStatus },
     });
 
-    // Revalidate relevant pages
     revalidatePath("/bookings");
     revalidatePath("/dashboard/bookings");
+
+    // -------------------------------------------------------------------------
+    // Fire-and-forget email triggers based on new status
+    // -------------------------------------------------------------------------
+    if (newStatus === "CANCELLED") {
+      const cancelledBy = isCustomer ? "customer" : "business";
+      sendBookingCancelledEmails(bookingId, cancelledBy).catch((err) => {
+        console.error("Cancellation email error:", err);
+      });
+    }
+
+    if (newStatus === "COMPLETED") {
+      // Small delay to ensure DB write is committed
+      setTimeout(() => {
+        sendReviewRequestEmail(bookingId).catch((err) => {
+          console.error("Review request email error:", err);
+        });
+      }, 2000);
+    }
 
     const statusLabels: Record<string, string> = {
       CONFIRMED: "confirmed",
@@ -431,12 +428,6 @@ export async function updateBookingStatus(
 /**
  * Reschedules an existing booking to a new date and time.
  *
- * Validates:
- *   - User owns the booking
- *   - Booking is in a state that allows rescheduling (PENDING or CONFIRMED)
- *   - New time slot is available (respects staff assignment if present)
- *   - New time is in the future
- *
  * @param values - Booking ID, new date, new start/end times
  * @returns Object with `success` or `error` message
  */
@@ -455,13 +446,10 @@ export async function rescheduleBooking(values: {
 
     const { bookingId, date, startTime, endTime } = values;
 
-    // Fetch the booking with its current staff assignment
     const booking = await db.booking.findUnique({
       where: { id: bookingId },
       include: {
-        service: {
-          select: { duration: true },
-        },
+        service: { select: { duration: true } },
       },
     });
 
@@ -469,14 +457,12 @@ export async function rescheduleBooking(values: {
       return { error: "Booking not found." };
     }
 
-    // Verify ownership
     if (booking.customerId !== user.id) {
       return {
         error: "You do not have permission to reschedule this booking.",
       };
     }
 
-    // Check booking is in a reschedulable state
     if (booking.status !== "PENDING" && booking.status !== "CONFIRMED") {
       return {
         error: "This booking cannot be rescheduled in its current state.",
@@ -488,13 +474,12 @@ export async function rescheduleBooking(values: {
     const requestedEnd = timeToMinutes(endTime);
 
     if (booking.staffId) {
-      // Staff-aware rescheduling — check conflicts for the assigned staff member
       const staffBookings = await db.booking.findMany({
         where: {
           staffId: booking.staffId,
           date: newBookingDate,
           status: { in: ["PENDING", "CONFIRMED"] },
-          id: { not: bookingId }, // Exclude the current booking
+          id: { not: bookingId },
         },
         select: { startTime: true, endTime: true },
       });
@@ -511,11 +496,10 @@ export async function rescheduleBooking(values: {
       if (hasConflict) {
         return {
           error:
-            "Your assigned staff member is not available at the selected time. Please choose a different time.",
+            "Your assigned staff member is not available at the selected time.",
         };
       }
     } else {
-      // Single-provider rescheduling — check against all business bookings
       const existingBookings = await db.booking.findMany({
         where: {
           businessId: booking.businessId,
@@ -543,7 +527,6 @@ export async function rescheduleBooking(values: {
       }
     }
 
-    // Update the booking
     await db.booking.update({
       where: { id: bookingId },
       data: {

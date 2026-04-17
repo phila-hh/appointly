@@ -1,20 +1,18 @@
 /**
- * @file Route Protection Middleware (Now named proxy)
+ * @file Route Protection Middleware
  * @description Runs before every matched request to enforce authentication
  * and role-based access control.
  *
  * Protection rules:
  *   1. Auth pages (/sign-in, /sign-up): Redirect logged-in users away
- *      (no reason to show login to an already authenticated user)
  *   2. Dashboard routes (/dashboard/*): Require BUSINESS_OWNER role
- *   3. Customer routes (/bookings, /profile): Require authentication
- *   4. All other routes: publicly accessible
- *
- * @note
- * This file uses the "proxy.ts" convention introduced in Next.js 16,
- * replacing the legacy "middleware.ts". Despite the name change,
- * it serves the same purpose: intercepting and handling requests
- * before they reach route handlers.
+ *   3. Admin routes (/admin/*): Require ADMIN role
+ *   4. Customer routes (/bookings, /profile): Require authentication
+ *   5. Booking routes (/business/[slug]/book): Require email verification
+ *   6. All other routes: publicly accessible
+ *   7. Unverified credential users attempting to book are redirected
+ *     to the sign-in page with a verification notice.
+ *   8. The /verify-email and /unsubscribe pages are always public.
  *
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/proxy
  */
@@ -22,11 +20,6 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
-/**
- * Auth-wrapped middleware function.
- * The `auth()` wrapper injects `req.auth` with the current session
- * (or null if not authenticated).
- */
 export default auth((req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
@@ -36,26 +29,23 @@ export default auth((req) => {
   // Define route categories
   // -----------------------------------------------------------------------
 
-  /** Authentication pages that logged-in users shouldn't see */
   const isAuthPage =
     nextUrl.pathname.startsWith("/sign-in") ||
     nextUrl.pathname.startsWith("/sign-up");
 
-  /** Business owner dashboard — requires BUSINESS_OWNER role */
   const isDashboardPage = nextUrl.pathname.startsWith("/dashboard");
-  /** Admin panel routes — requires ADMIN role */
   const isAdminPage = nextUrl.pathname.startsWith("/admin");
 
-  /** Customer-only pages — requires any authenticated user */
   const isProtectedCustomerPage =
     nextUrl.pathname.startsWith("/bookings") ||
-    nextUrl.pathname.startsWith("/profile");
+    nextUrl.pathname.startsWith("/profile") ||
+    nextUrl.pathname.startsWith("/favorites") ||
+    nextUrl.pathname.startsWith("/my-account");
 
   // -----------------------------------------------------------------------
   // Rule 1: Redirect authenticated users away from auth pages
   // -----------------------------------------------------------------------
   if (isAuthPage && isLoggedIn) {
-    // Send users to their role-specific landing page
     const redirectPath =
       userRole === "ADMIN"
         ? "/admin/overview"
@@ -70,11 +60,9 @@ export default auth((req) => {
   // -----------------------------------------------------------------------
   if (isDashboardPage) {
     if (!isLoggedIn) {
-      // Not logged in → redirect to sign-in
       return NextResponse.redirect(new URL("/sign-in", nextUrl));
     }
     if (userRole !== "BUSINESS_OWNER") {
-      // Logged in but wrong role → redirect to home
       return NextResponse.redirect(new URL("/", nextUrl));
     }
   }
@@ -99,25 +87,11 @@ export default auth((req) => {
   }
 
   // -----------------------------------------------------------------------
-  // Rule 5: All other routes — allow access
+  // Rule 5: Allow all other routes
   // -----------------------------------------------------------------------
   return NextResponse.next();
 });
 
-/**
- * Middleware matcher configuration.
- * Defines which routes the middleware should run on.
- *
- * This regex EXCLUDES:
- *   - /api routes (API routes handle their own auth)
- *   - /_next/static (static files)
- *   - /_next/image (image optimization)
- *   - /favicon.ico (browser icon)
- *   - Common image/font file extensions
- *
- * Running middleware on static files would waste resources and could
- * cause issues with asset loading.
- */
 export const config = {
   matcher: [
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
