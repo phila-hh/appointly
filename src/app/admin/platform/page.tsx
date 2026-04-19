@@ -1,37 +1,48 @@
-import db from "@/lib/db";
+/**
+ * @file Admin Platform Settings Page
+ * @description Central configuration page for platform-wide settings.
+ *
+ * Features:
+ *   - View and edit default commission rate (as a percentage)
+ *   - View and edit payout schedule (Monthly / Weekly / Biweekly)
+ *   - All changes are logged in the admin audit trail
+ *   - Form validates input before calling the server action
+ *
+ * URL: /admin/platform
+ */
+
 import { requireAdmin } from "@/lib/guards";
+import db from "@/lib/db";
+import { PlatformSettingsForm } from "./platform-settings-form";
 
 export const metadata = { title: "Platform Settings" };
 
 export default async function AdminPlatformPage() {
   await requireAdmin();
+
   const settings = await db.platformSettings.findFirst();
 
   return (
     <div className="space-y-6">
+      {/* Page header */}
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Platform Settings</h2>
         <p className="text-muted-foreground">
-          Central settings for commission defaults and payout cadence.
+          Manage commission rates and payout schedules. All changes are logged
+          in the audit trail.
         </p>
       </div>
 
-      <div className="max-w-xl rounded-lg border p-4 text-sm">
-        <p>
-          Default commission rate:{" "}
-          <span className="font-medium">
-            {Math.round((settings?.defaultCommissionRate ?? 0.1) * 100)}%
-          </span>
-        </p>
-        <p className="mt-2">
-          Payout schedule:{" "}
-          <span className="font-medium">
-            {settings?.payoutSchedule ?? "MONTHLY"}
-          </span>
-        </p>
-        <p className="mt-4 text-xs text-muted-foreground">
-          Editable controls will be added in Phase 14B with finance workflows.
-        </p>
+      <div className="max-w-xl">
+        <PlatformSettingsForm
+          currentCommissionRate={Math.round(
+            (settings?.defaultCommissionRate ?? 0.1) * 100
+          )}
+          currentPayoutSchedule={
+            (settings?.payoutSchedule as "MONTHLY" | "WEEKLY" | "BIWEEKLY") ??
+            "MONTHLY"
+          }
+        />
       </div>
     </div>
   );
