@@ -1,8 +1,46 @@
+/**
+ * @file Admin Finance Overview Page
+ * @description Platform financial health dashboard.
+ *
+ * Features:
+ *   - KPI cards: pending commissions, pending net payout, platform earnings
+ *   - Payout pipeline status breakdown (PENDING / PROCESSING / PAID / FAILED)
+ *   - Recent payouts list with quick links
+ *   - Quick action navigation to commissions and payouts pages
+ *
+ * URL: /admin/finance
+ */
+
 import Link from "next/link";
+import { format } from "date-fns";
+import { HandCoins, TrendingUp, Clock, ArrowRight } from "lucide-react";
 
 import { getFinanceOverview, getPayouts } from "@/lib/actions/finance-queries";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { KPICard } from "@/components/shared/kpi-card";
+import { StatsGrid } from "@/components/shared/stats-grid";
+import { formatPrice } from "@/lib/utils";
 
-export const metadata = { title: "Finance Overview" };
+export const metadata = { title: "Finance" };
+
+/**
+ * Badge variant config for payout status labels.
+ */
+const PAYOUT_STATUS_CONFIG: Record<
+  string,
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
+> = {
+  PENDING: { label: "Pending", variant: "secondary" },
+  PROCESSING: { label: "Processing", variant: "outline" },
+  PAID: { label: "Paid", variant: "default" },
+  FAILED: { label: "Failed", variant: "destructive" },
+};
 
 export default async function AdminFinanceOverviewPage() {
   const [overview, recentPayouts] = await Promise.all([
@@ -16,116 +54,196 @@ export default async function AdminFinanceOverviewPage() {
   const totalCommission = Number(overview.totals._sum.commissionAmount ?? 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Page header */}
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Finance Overview</h2>
         <p className="text-muted-foreground">
-          Monitor platform commissions and payouts in one place.
+          Monitor platform commissions, payout pipeline, and financial health.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Pending Commissions</p>
-          <p className="mt-2 text-2xl font-semibold">
-            {overview.pending._count.id.toLocaleString()}
-          </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Pending Gross</p>
-          <p className="mt-2 text-2xl font-semibold">
-            ETB {pendingGross.toLocaleString()}
-          </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Pending Net Payout</p>
-          <p className="mt-2 text-2xl font-semibold">
-            ETB {pendingNet.toLocaleString()}
-          </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Platform Commission</p>
-          <p className="mt-2 text-2xl font-semibold">
-            ETB {totalCommission.toLocaleString()}
-          </p>
-        </div>
-      </div>
+      {/* KPI cards */}
+      <StatsGrid columns={4}>
+        <KPICard
+          title="Pending Commissions"
+          value={overview.pending._count.id.toLocaleString()}
+          description="Awaiting payout generation"
+          icon={Clock}
+        />
+        <KPICard
+          title="Pending Gross"
+          value={formatPrice(pendingGross)}
+          description="Customer payments"
+          icon={TrendingUp}
+        />
+        <KPICard
+          title="Pending Net Payout"
+          value={formatPrice(pendingNet)}
+          description="To pay businesses"
+          icon={HandCoins}
+        />
+        <KPICard
+          title="Platform Earnings"
+          value={formatPrice(totalCommission)}
+          description="All-time commission"
+          icon={TrendingUp}
+        />
+      </StatsGrid>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border p-4">
-          <h3 className="font-semibold">Payout Pipeline</h3>
-          <div className="mt-3 space-y-2 text-sm">
-            {overview.payoutStats.map((stat) => (
-              <p key={stat.status}>
-                {stat.status}:{" "}
-                <span className="font-medium">
-                  {stat._count.id.toLocaleString()}
-                </span>
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Payout pipeline */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Payout Pipeline</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {overview.payoutStats.length > 0 ? (
+              <>
+                {overview.payoutStats.map((stat) => {
+                  const config =
+                    PAYOUT_STATUS_CONFIG[stat.status] ??
+                    PAYOUT_STATUS_CONFIG.PENDING;
+                  return (
+                    <div
+                      key={stat.status}
+                      className="flex items-center justify-between"
+                    >
+                      <Badge variant={config.variant}>{config.label}</Badge>
+                      <span className="text-sm font-medium">
+                        {stat._count.id.toLocaleString()}{" "}
+                        {stat._count.id === 1 ? "payout" : "payouts"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No payouts generated yet.
               </p>
-            ))}
-            {overview.payoutStats.length === 0 && (
-              <p className="text-muted-foreground">No payouts yet.</p>
             )}
-          </div>
-        </div>
-        <div className="rounded-lg border p-4">
-          <h3 className="font-semibold">Quick Actions</h3>
-          <div className="mt-3 flex gap-2">
+
+            <Separator />
+
+            <p className="text-xs text-muted-foreground">
+              Pending commission value:{" "}
+              <span className="font-medium text-foreground">
+                {formatPrice(pendingCommission)}
+              </span>
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Quick actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             <Link
               href="/admin/finance/commissions"
-              className="rounded-md border px-3 py-2 text-sm hover:bg-muted"
-            >
-              View commissions
-            </Link>
-            <Link
-              href="/admin/finance/payouts"
-              className="rounded-md border px-3 py-2 text-sm hover:bg-muted"
-            >
-              Manage payouts
-            </Link>
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Pending commission total: ETB {pendingCommission.toLocaleString()}
-          </p>
-        </div>
-      </div>
-
-      <div className="rounded-lg border">
-        <div className="border-b p-4">
-          <h3 className="font-semibold">Recent Payouts</h3>
-        </div>
-        <div className="divide-y">
-          {recentPayouts.slice(0, 8).map((payout) => (
-            <div
-              key={payout.id}
-              className="flex items-center justify-between p-4 text-sm"
+              className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-accent"
             >
               <div>
-                <p className="font-medium">{payout.business.name}</p>
+                <p className="text-sm font-medium">View Commissions</p>
                 <p className="text-xs text-muted-foreground">
-                  {payout.period} • {payout.status}
+                  {overview.pending._count.id} pending commission
+                  {overview.pending._count.id !== 1 ? "s" : ""}
                 </p>
               </div>
-              <div className="text-right">
-                <p className="font-medium">
-                  ETB {Number(payout.amount).toLocaleString()}
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+
+            <Link
+              href="/admin/finance/payouts"
+              className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-accent"
+            >
+              <div>
+                <p className="text-sm font-medium">Manage Payouts</p>
+                <p className="text-xs text-muted-foreground">
+                  Generate and process business payouts
                 </p>
-                <Link
-                  href={`/admin/finance/payouts/${payout.id}`}
-                  className="text-xs text-primary hover:underline"
-                >
-                  View details
-                </Link>
               </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent payouts */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Recent Payouts</CardTitle>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/admin/finance/payouts">
+              View all
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {recentPayouts.length > 0 ? (
+            <div className="divide-y">
+              {recentPayouts.slice(0, 8).map((payout) => {
+                const config =
+                  PAYOUT_STATUS_CONFIG[payout.status] ??
+                  PAYOUT_STATUS_CONFIG.PENDING;
+
+                return (
+                  <div
+                    key={payout.id}
+                    className="flex items-center justify-between px-6 py-4"
+                  >
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">
+                        {payout.business.name}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          {payout.period}
+                        </p>
+                        <Badge variant={config.variant} className="text-xs">
+                          {config.label}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-sm font-semibold">
+                          {formatPrice(Number(payout.amount))}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(payout.createdAt, "MMM d, yyyy")}
+                        </p>
+                      </div>
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/admin/finance/payouts/${payout.id}`}>
+                          Details
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ))}
-          {recentPayouts.length === 0 && (
-            <div className="p-4 text-sm text-muted-foreground">
-              No payouts generated yet.
+          ) : (
+            <div className="px-6 py-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                No payouts generated yet. Generate your first payout batch from
+                the{" "}
+                <Link
+                  href="/admin/finance/payouts"
+                  className="text-primary hover:underline"
+                >
+                  payouts page
+                </Link>
+                .
+              </p>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
