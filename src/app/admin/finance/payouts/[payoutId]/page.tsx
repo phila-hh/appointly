@@ -1,12 +1,47 @@
-import { format } from "date-fns";
+/**
+ * @file Admin Payout Detail Page
+ * @description Detailed view of a single payout batch with lifecycle controls.
+ *
+ * Features:
+ *   - Summary KPI cards (status, gross, commission, net)
+ *   - Business and owner info
+ *   - Lifecycle action buttons:
+ *       - Mark Processing (PENDING → PROCESSING)
+ *       - Mark Paid (any → PAID, requires reference number)
+ *       - Mark Failed (PROCESSING → FAILED, returns commissions to pending)
+ *   - Commission line items table
+ *   - Paid-at timestamp and reference display
+ *
+ * URL: /admin/finance/payouts/[payoutId]
+ */
 
+import Link from "next/link";
+import { format } from "date-fns";
 import {
-  markPayoutFailed,
-  markPayoutPaid,
-  setPayoutProcessing,
-} from "@/lib/actions/finance";
+  ArrowLeft,
+  Building2,
+  Mail,
+  CalendarDays,
+  CheckCircle2,
+} from "lucide-react";
+
 import { getPayoutDetail } from "@/lib/actions/finance-queries";
+import { markPayoutFailed, setPayoutProcessing } from "@/lib/actions/finance";
 import { ConfirmActionForm } from "@/components/shared/confirm-action-form";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { formatPrice } from "@/lib/utils";
+import { MarkPayoutPaidForm } from "./mark-payout-paid-form";
 
 interface AdminPayoutDetailPageProps {
   params: Promise<{ payoutId: string }>;
@@ -14,133 +49,275 @@ interface AdminPayoutDetailPageProps {
 
 export const metadata = { title: "Payout Detail" };
 
+const PAYOUT_STATUS_CONFIG: Record<
+  string,
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+    className?: string;
+  }
+> = {
+  PENDING: { label: "Pending", variant: "secondary" },
+  PROCESSING: {
+    label: "Processing",
+    variant: "outline",
+    className:
+      "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300",
+  },
+  PAID: {
+    label: "Paid",
+    variant: "default",
+    className:
+      "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300",
+  },
+  FAILED: { label: "Failed", variant: "destructive" },
+};
+
 export default async function AdminPayoutDetailPage({
   params,
 }: AdminPayoutDetailPageProps) {
   const { payoutId } = await params;
   const payout = await getPayoutDetail(payoutId);
 
+  const statusConfig =
+    PAYOUT_STATUS_CONFIG[payout.status] ?? PAYOUT_STATUS_CONFIG.PENDING;
+
+  const canMarkProcessing = payout.status === "PENDING";
+  const canMarkPaid = payout.status !== "PAID";
+  const canMarkFailed =
+    payout.status === "PENDING" || payout.status === "PROCESSING";
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Payout Detail</h2>
-        <p className="text-muted-foreground">
-          {payout.business.name} • {payout.period}
-        </p>
-      </div>
+      {/* Back button */}
+      <Button variant="ghost" size="sm" asChild className="-ml-2">
+        <Link href="/admin/finance/payouts">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Payouts
+        </Link>
+      </Button>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">Status</p>
-          <p className="mt-1 font-semibold">{payout.status}</p>
+      {/* Page header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-bold tracking-tight">Payout Detail</h2>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Building2 className="h-4 w-4" />
+            <span className="text-sm">{payout.business.name}</span>
+            <span className="text-sm">·</span>
+            <CalendarDays className="h-4 w-4" />
+            <span className="text-sm">{payout.period}</span>
+          </div>
         </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">Gross Total</p>
-          <p className="mt-1 font-semibold">
-            ETB {Number(payout.grossTotal).toLocaleString()}
-          </p>
-        </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">Commission Total</p>
-          <p className="mt-1 font-semibold">
-            ETB {Number(payout.commissionTotal).toLocaleString()}
-          </p>
-        </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">Net Amount</p>
-          <p className="mt-1 font-semibold">
-            ETB {Number(payout.amount).toLocaleString()}
-          </p>
-        </div>
-      </div>
-
-      <div className="rounded-lg border p-4">
-        <h3 className="font-semibold">Payout Actions</h3>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <ConfirmActionForm
-            action={setPayoutProcessing.bind(null, payout.id)}
-            confirmMessage="Move payout to PROCESSING?"
-            label="Mark Processing"
-          />
-          <ConfirmActionForm
-            action={markPayoutFailed.bind(null, payout.id)}
-            confirmMessage="Mark payout as FAILED and return commissions to pending?"
-            label="Mark Failed"
-            variant="destructive"
-          />
-        </div>
-
-        <form
-          action={async (formData) => {
-            "use server";
-            await markPayoutPaid(payout.id, formData);
-          }}
-          className="mt-4 grid gap-3 md:grid-cols-3"
+        <Badge
+          variant={statusConfig.variant}
+          className={`text-sm ${statusConfig.className ?? ""}`}
         >
-          <input
-            name="reference"
-            required
-            placeholder="Transfer reference"
-            className="h-10 rounded-md border bg-background px-3 text-sm"
-          />
-          <input
-            name="notes"
-            placeholder="Optional notes"
-            className="h-10 rounded-md border bg-background px-3 text-sm"
-          />
-          <button
-            type="submit"
-            className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-          >
-            Mark as Paid
-          </button>
-        </form>
-
-        {payout.paidAt && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Paid at {format(payout.paidAt, "PPP p")} • Ref:{" "}
-            {payout.reference ?? "-"}
-          </p>
-        )}
+          {statusConfig.label}
+        </Badge>
       </div>
 
-      <div className="rounded-lg border">
-        <div className="border-b p-4">
-          <h3 className="font-semibold">Commission Line Items</h3>
-        </div>
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-left">
-            <tr>
-              <th className="px-4 py-3">Booking</th>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Gross</th>
-              <th className="px-4 py-3">Commission</th>
-              <th className="px-4 py-3">Net</th>
-              <th className="px-4 py-3">Status</th>
-            </tr>
-          </thead>
-          <tbody>
+      {/* Summary KPI cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          {
+            label: "Gross Total",
+            value: formatPrice(Number(payout.grossTotal)),
+          },
+          {
+            label: "Commission Deducted",
+            value: formatPrice(Number(payout.commissionTotal)),
+          },
+          {
+            label: "Net Amount",
+            value: formatPrice(Number(payout.amount)),
+          },
+          {
+            label: "Line Items",
+            value: payout.commissions.length.toString(),
+          },
+        ].map(({ label, value }) => (
+          <Card key={label}>
+            <CardContent className="pt-6">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {label}
+              </p>
+              <p className="mt-1 text-xl font-bold">{value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Business info */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Business</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="font-semibold">{payout.business.name}</p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Mail className="h-4 w-4" />
+              <span>{payout.business.owner.email}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Owner: {payout.business.owner.name ?? "Unnamed"}
+            </p>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/admin/users/${payout.business.owner.id}`}>
+                View Owner Account
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Payout actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Payout Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {payout.status === "PAID" ? (
+              /* Paid state — show confirmation details */
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-green-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <span className="font-medium">Payout Completed</span>
+                </div>
+                {payout.paidAt && (
+                  <p className="text-sm text-muted-foreground">
+                    Paid on {format(payout.paidAt, "MMMM d, yyyy 'at' h:mm a")}
+                  </p>
+                )}
+                {payout.reference && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Reference
+                    </p>
+                    <p className="font-mono text-sm">{payout.reference}</p>
+                  </div>
+                )}
+                {payout.notes && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Notes
+                    </p>
+                    <p className="text-sm">{payout.notes}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Active state — show action buttons */
+              <div className="space-y-4">
+                {/* Mark processing */}
+                {canMarkProcessing && (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Mark as Processing</p>
+                      <p className="text-xs text-muted-foreground">
+                        Indicates transfer has been initiated
+                      </p>
+                    </div>
+                    <ConfirmActionForm
+                      action={() => setPayoutProcessing(payoutId)}
+                      title="Mark Payout as Processing"
+                      description="This indicates you have started the bank or mobile money transfer. Move the payout to PROCESSING status?"
+                      label="Mark Processing"
+                      variant="outline"
+                    />
+                  </div>
+                )}
+
+                {canMarkProcessing && canMarkPaid && <Separator />}
+
+                {/* Mark paid */}
+                {canMarkPaid && (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium">Mark as Paid</p>
+                      <p className="text-xs text-muted-foreground">
+                        Enter the transfer reference to confirm payment
+                      </p>
+                    </div>
+                    <MarkPayoutPaidForm payoutId={payoutId} />
+                  </div>
+                )}
+
+                {canMarkFailed && <Separator />}
+
+                {/* Mark failed */}
+                {canMarkFailed && (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-destructive">
+                        Mark as Failed
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Returns commissions to pending for next cycle
+                      </p>
+                    </div>
+                    <ConfirmActionForm
+                      action={() => markPayoutFailed(payoutId)}
+                      title="Mark Payout as Failed"
+                      description="This will mark the payout as FAILED and return all linked commissions to PENDING status so they can be included in a future payout batch. This cannot be undone."
+                      label="Mark Failed"
+                      variant="destructive"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Commission line items */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            Commission Line Items ({payout.commissions.length})
+          </CardTitle>
+        </CardHeader>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Booking ID</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead className="text-right">Gross</TableHead>
+              <TableHead className="text-right">Commission</TableHead>
+              <TableHead className="text-right">Net</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {payout.commissions.map((row) => (
-              <tr key={row.id} className="border-t">
-                <td className="px-4 py-3 text-xs">{row.booking.id}</td>
-                <td className="px-4 py-3 text-xs">
-                  {format(row.booking.date, "PPP")} {row.booking.startTime}
-                </td>
-                <td className="px-4 py-3">
-                  ETB {Number(row.grossAmount).toLocaleString()}
-                </td>
-                <td className="px-4 py-3">
-                  ETB {Number(row.commissionAmount).toLocaleString()}
-                </td>
-                <td className="px-4 py-3">
-                  ETB {Number(row.netAmount).toLocaleString()}
-                </td>
-                <td className="px-4 py-3">{row.status}</td>
-              </tr>
+              <TableRow key={row.id}>
+                <TableCell className="font-mono text-xs">
+                  {row.booking.id}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {format(row.booking.date, "MMM d, yyyy")}{" "}
+                  {row.booking.startTime}
+                </TableCell>
+                <TableCell className="text-right text-sm">
+                  {formatPrice(Number(row.grossAmount))}
+                </TableCell>
+                <TableCell className="text-right text-sm text-muted-foreground">
+                  − {formatPrice(Number(row.commissionAmount))}
+                </TableCell>
+                <TableCell className="text-right text-sm font-medium">
+                  {formatPrice(Number(row.netAmount))}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary" className="text-xs">
+                    {row.status.replace("_", " ")}
+                  </Badge>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
     </div>
   );
 }
