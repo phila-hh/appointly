@@ -1,10 +1,34 @@
+/**
+ * @file Admin User Detail Page
+ * @description Detailed view of a single user account.
+ *
+ * Features:
+ *   - User info (name, email, role, status, join date)
+ *   - Activity summary (bookings, reviews, favorites)
+ *   - Linked business profile (if BUSINESS_OWNER)
+ *   - Suspend/activate action with reason
+ *
+ * URL: /admin/users/[userId]
+ */
+
 import Link from "next/link";
 import { format } from "date-fns";
+import {
+  ArrowLeft,
+  Mail,
+  CalendarDays,
+  Star,
+  Heart,
+  Building2,
+} from "lucide-react";
 
 import { getAdminUserDetail } from "@/lib/actions/admin-queries";
-import { activateUser, suspendUser } from "@/lib/actions/admin";
+import { suspendUser, activateUser } from "@/lib/actions/admin";
 import { ConfirmActionForm } from "@/components/shared/confirm-action-form";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 interface AdminUserDetailPageProps {
   params: Promise<{ userId: string }>;
@@ -21,105 +45,150 @@ export default async function AdminUserDetailPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
+      {/* Back button */}
+      <Button variant="ghost" size="sm" asChild className="-ml-2">
+        <Link href="/admin/users">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Users
+        </Link>
+      </Button>
+
+      {/* Page header with action */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
           <h2 className="text-2xl font-bold tracking-tight">
             {user.name ?? "Unnamed User"}
           </h2>
-          <p className="text-muted-foreground">{user.email}</p>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Mail className="h-4 w-4" />
+            <span className="text-sm">{user.email}</span>
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <Badge variant="outline">{user.role.replace("_", " ")}</Badge>
+            <Badge variant={isActive ? "default" : "secondary"}>
+              {isActive ? "Active" : "Suspended"}
+            </Badge>
+          </div>
         </div>
+
+        {/* Action */}
         {isActive ? (
           <ConfirmActionForm
-            action={suspendUser.bind(null, user.id)}
-            confirmMessage={`Suspend ${user.email}?`}
-            label="Suspend user"
+            action={(reason) => suspendUser(user.id, reason ?? "")}
+            title="Suspend User"
+            description={`Suspend ${user.email}? They will lose platform access and receive a notification email.`}
+            label="Suspend User"
             variant="destructive"
+            requiresReason
+            reasonPlaceholder="Explain why this account is being suspended. This will be included in the notification email."
           />
         ) : (
           <ConfirmActionForm
-            action={activateUser.bind(null, user.id)}
-            confirmMessage={`Activate ${user.email}?`}
-            label="Activate user"
+            action={() => activateUser(user.id)}
+            title="Reactivate User"
+            description={`Reactivate ${user.email}? They will regain full platform access.`}
+            label="Activate User"
+            variant="outline"
           />
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">Role</p>
-          <p className="mt-1">
-            <Badge variant="outline">{user.role}</Badge>
-          </p>
-        </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">Status</p>
-          <p className="mt-1">
-            <Badge variant={isActive ? "default" : "secondary"}>
-              {isActive ? "ACTIVE" : "SUSPENDED"}
-            </Badge>
-          </p>
-        </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">Joined</p>
-          <p className="mt-1 font-medium">{format(user.createdAt, "PPP")}</p>
-        </div>
+      {/* Info cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Joined
+            </p>
+            <p className="mt-1 font-semibold">
+              {format(user.createdAt, "MMM d, yyyy")}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Bookings
+            </p>
+            <div className="mt-1 flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <p className="font-semibold">{user._count.bookings}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Reviews
+            </p>
+            <div className="mt-1 flex items-center gap-2">
+              <Star className="h-4 w-4 text-muted-foreground" />
+              <p className="font-semibold">{user._count.reviews}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Favorites
+            </p>
+            <div className="mt-1 flex items-center gap-2">
+              <Heart className="h-4 w-4 text-muted-foreground" />
+              <p className="font-semibold">{user._count.favorites}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="rounded-lg border p-4">
-        <h3 className="font-semibold">User Activity</h3>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          <p className="text-sm">
-            Bookings:{" "}
-            <span className="font-medium">{user._count.bookings}</span>
-          </p>
-          <p className="text-sm">
-            Reviews: <span className="font-medium">{user._count.reviews}</span>
-          </p>
-          <p className="text-sm">
-            Favorites:{" "}
-            <span className="font-medium">{user._count.favorites}</span>
-          </p>
-        </div>
-      </div>
+      {/* Business profile section */}
+      {user.business && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Building2 className="h-4 w-4" />
+              Business Profile
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="space-y-1">
+                <p className="font-semibold">{user.business.name}</p>
+                <Badge
+                  variant={user.business.isActive ? "default" : "secondary"}
+                  className="text-xs"
+                >
+                  {user.business.isActive ? "Active" : "Suspended"}
+                </Badge>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/admin/businesses/${user.business.id}`}>
+                  View Business Detail
+                </Link>
+              </Button>
+            </div>
 
-      <div className="rounded-lg border p-4">
-        <h3 className="font-semibold">Business Profile</h3>
-        {user.business ? (
-          <div className="mt-3 space-y-2 text-sm">
-            <p>
-              Name: <span className="font-medium">{user.business.name}</span>
-            </p>
-            <p>
-              Status:{" "}
-              <span className="font-medium">
-                {user.business.isActive ? "ACTIVE" : "SUSPENDED"}
-              </span>
-            </p>
-            <p>
-              Services:{" "}
-              <span className="font-medium">
-                {user.business._count.services}
-              </span>
-            </p>
-            <p>
-              Bookings:{" "}
-              <span className="font-medium">
-                {user.business._count.bookings}
-              </span>
-            </p>
-            <Link
-              href={`/admin/businesses/${user.business.id}`}
-              className="inline-block text-primary hover:underline"
-            >
-              View business detail
-            </Link>
-          </div>
-        ) : (
-          <p className="mt-2 text-sm text-muted-foreground">
-            No business profile linked.
-          </p>
-        )}
-      </div>
+            <Separator />
+
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Services</p>
+                <p className="font-medium">{user.business._count.services}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Bookings</p>
+                <p className="font-medium">{user.business._count.bookings}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Reviews</p>
+                <p className="font-medium">{user.business._count.reviews}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
