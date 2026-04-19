@@ -4,8 +4,11 @@
  *
  * Displays:
  *   - User avatar (image or initials fallback)
- *   - User name and email
- *   - Navigation links based on role (Dashboard for owners, Bookings for customers)
+ *   - User name, email, and role badge
+ *   - Navigation links based on role:
+ *       - ADMIN: Admin Panel link
+ *       - BUSINESS_OWNER: Dashboard link
+ *       - CUSTOMER: My Account, Bookings, Favorites, Profile links
  *   - Sign Out button
  *
  * This is a Client Component because it uses the dropdown menu's
@@ -21,10 +24,12 @@ import {
   Heart,
   LayoutDashboard,
   LogOut,
+  Shield,
   User as UserIcon,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,11 +52,21 @@ interface UserMenuProps {
 }
 
 /**
+ * Human-readable role labels for the badge display.
+ * Maps the database enum to a friendly label.
+ */
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Admin",
+  BUSINESS_OWNER: "Business Owner",
+  CUSTOMER: "Customer",
+};
+
+/**
  * Extracts initials from a user's name for the avatar fallback.
  * "Marcus Johnson" → "MJ", "Elena" → "EL", null → "U"
  *
  * @param name - The user's display name
- * @returns One or two character string initials
+ * @returns One or two character string of initials
  */
 function getInitials(name?: string | null): string {
   if (!name) return "U";
@@ -67,6 +82,8 @@ export function UserMenu({ user }: UserMenuProps) {
   async function handleSignOut() {
     await signOut({ redirectTo: "/" });
   }
+
+  const roleLabel = ROLE_LABELS[user.role] ?? user.role;
 
   return (
     <DropdownMenu>
@@ -89,8 +106,13 @@ export function UserMenu({ user }: UserMenuProps) {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         {/* User info section */}
         <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
+          <div className="flex flex-col space-y-1.5">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium leading-none">{user.name}</p>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                {roleLabel}
+              </Badge>
+            </div>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
@@ -101,14 +123,44 @@ export function UserMenu({ user }: UserMenuProps) {
 
         {/* Navigation links — different based on role */}
         <DropdownMenuGroup>
-          {user.role === "BUSINESS_OWNER" ? (
+          {/* ---------------------------------------------------------------- */}
+          {/* ADMIN role — Admin Panel link                                     */}
+          {/* ---------------------------------------------------------------- */}
+          {user.role === "ADMIN" && (
+            <>
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link href="/admin/overview">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Admin Panel
+                </Link>
+              </DropdownMenuItem>
+
+              {/* Admins may also browse as customers, so include browse link */}
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link href="/browse">
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  Browse Services
+                </Link>
+              </DropdownMenuItem>
+            </>
+          )}
+
+          {/* ---------------------------------------------------------------- */}
+          {/* BUSINESS_OWNER role — Dashboard link                             */}
+          {/* ---------------------------------------------------------------- */}
+          {user.role === "BUSINESS_OWNER" && (
             <DropdownMenuItem asChild className="cursor-pointer">
               <Link href="/dashboard/overview">
                 <LayoutDashboard className="mr-2 h-4 w-4" />
                 Dashboard
               </Link>
             </DropdownMenuItem>
-          ) : (
+          )}
+
+          {/* ---------------------------------------------------------------- */}
+          {/* CUSTOMER role — Full customer navigation                         */}
+          {/* ---------------------------------------------------------------- */}
+          {user.role === "CUSTOMER" && (
             <>
               <DropdownMenuItem asChild className="cursor-pointer">
                 <Link href="/my-account">
@@ -128,15 +180,16 @@ export function UserMenu({ user }: UserMenuProps) {
                   Favorites
                 </Link>
               </DropdownMenuItem>
-
-              <DropdownMenuItem asChild className="cursor-pointer">
-                <Link href="/profile">
-                  <UserIcon className="mr-2 h-4 w-4" />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
             </>
           )}
+
+          {/* Profile link — shown for all roles */}
+          <DropdownMenuItem asChild className="cursor-pointer">
+            <Link href="/profile">
+              <UserIcon className="mr-2 h-4 w-4" />
+              Profile
+            </Link>
+          </DropdownMenuItem>
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />
