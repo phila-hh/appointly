@@ -3,10 +3,38 @@
  * @description A client-side form component that prompts for confirmation
  * before executing a server action. Optionally collects a reason field.
  *
- * Supports two modes:
- *   - Simple mode: confirm button only (e.g., activate, mark processing)
- *   - Reason mode: includes a required text field for admin reason input
- *     (e.g., suspend user/business — the reason is emailed to the user)
+ * Architecture note:
+ *   Server actions marked with "use server" CAN be passed as props to
+ *   Client Components — Next.js serializes them as references. However,
+ *   arrow function wrappers around server actions CANNOT cross the boundary.
+ *
+ *   To avoid this, this component accepts the server action and entity ID
+ *   as separate props and binds them internally using .bind(), which
+ *   Next.js supports for server actions.
+ *
+ * Usage patterns:
+ *
+ *   Simple action (no entity ID, no reason):
+ *   <ConfirmActionForm
+ *     action={setPayoutProcessing}
+ *     entityId={payoutId}
+ *     ...
+ *   />
+ *
+ *   Action with reason (suspend user/business):
+ *   <ConfirmActionForm
+ *     action={suspendUser}
+ *     entityId={userId}
+ *     requiresReason
+ *     ...
+ *   />
+ *
+ *   Action with no entity ID:
+ *   <ConfirmActionForm
+ *     action={flagReview}
+ *     entityId={reviewId}
+ *     ...
+ *   />
  */
 
 "use client";
@@ -30,27 +58,49 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+/** Standard result type returned by all admin server actions. */
+type ActionResult = { success?: string; error?: string };
+
+/**
+ * A server action that accepts an entity ID and optionally a reason string.
+ *
+ * Supported signatures:
+ *   - (entityId: string) => Promise<ActionResult>
+ *   - (entityId: string, reason: string) => Promise<ActionResult>
+ *   - () => Promise<ActionResult>  (when entityId is not needed)
+ */
+type ServerAction =
+  | ((entityId: string, reason: string) => Promise<ActionResult>)
+  | ((entityId: string) => Promise<ActionResult>)
+  | (() => Promise<ActionResult>);
+
 /** Props accepted by the ConfirmActionForm component. */
 interface ConfirmActionFormProps {
   /**
-   * The server action to execute on confirmation.
-   * If `requiresReason` is true, receives the reason string as argument.
+   * The server action to call on confirmation.
+   * Must be imported from a "use server" file directly — do NOT wrap it
+   * in an arrow function before passing, as that breaks serialization.
    */
-  action: (reason?: string) => Promise<{ success?: string; error?: string }>;
+  action: ServerAction;
+  /**
+   * The primary entity ID passed as the first argument to the action.
+   * Pass an empty string if the action takes no arguments.
+   */
+  entityId: string;
   /** Dialog title shown to the admin. */
   title: string;
   /** Dialog description / warning message. */
   description: string;
-  /** Button label text. */
+  /** Trigger button label. */
   label: string;
   /** shadcn Button variant for the trigger button. */
   variant?: "default" | "destructive" | "outline" | "secondary" | "ghost";
   /** Button size. */
   size?: "sm" | "default" | "lg" | "icon";
   /**
-   * When true, renders a Textarea field in the dialog.
+   * When true, renders a Textarea in the dialog.
    * The admin must enter a reason before confirming.
-   * The reason is passed to the action and included in notification emails.
+   * The reason is passed as the second argument to the action.
    */
   requiresReason?: boolean;
   /** Placeholder text for the reason textarea. */
@@ -59,6 +109,7 @@ interface ConfirmActionFormProps {
 
 export function ConfirmActionForm({
   action,
+  entityId,
   title,
   description,
   label,
@@ -71,7 +122,7 @@ export function ConfirmActionForm({
   const [reason, setReason] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  /** Validate and execute the action. */
+  /** Execute the action with the correct arguments. */
   function handleConfirm() {
     if (requiresReason && reason.trim().length < 10) {
       toast.error("Please provide a reason of at least 10 characters.");
@@ -80,7 +131,22 @@ export function ConfirmActionForm({
 
     startTransition(async () => {
       try {
-        const result = await action(requiresReason ? reason.trim() : undefined);
+        let result: ActionResult;
+
+        if (requiresReason) {
+          // Action signature: (entityId, reason) => Promise<ActionResult>
+          result = await (
+            action as (id: string, reason: string) => Promise<ActionResult>
+          )(entityId, reason.trim());
+        } else if (entityId) {
+          // Action signature: (entityId) => Promise<ActionResult>
+          result = await (action as (id: string) => Promise<ActionResult>)(
+            entityId
+          );
+        } else {
+          // Action signature: () => Promise<ActionResult>
+          result = await (action as () => Promise<ActionResult>)();
+        }
 
         if (result.error) {
           toast.error(result.error);
@@ -119,12 +185,12 @@ export function ConfirmActionForm({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
 
-        {/* Reason field — rendered only when requiresReason is true */}
+        {/* Reason textarea — only rendered when requiresReason is true */}
         {requiresReason && (
           <div className="space-y-2 py-2">
             <Label htmlFor="action-reason" className="text-sm font-medium">
               Reason{" "}
-              <span className="text-muted-foreground font-normal">
+              <span className="font-normal text-muted-foreground">
                 (required — will be sent to the user)
               </span>
             </Label>

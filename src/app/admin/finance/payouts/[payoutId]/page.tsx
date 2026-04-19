@@ -219,7 +219,8 @@ export default async function AdminPayoutDetailPage({
                       </p>
                     </div>
                     <ConfirmActionForm
-                      action={() => setPayoutProcessing(payoutId)}
+                      action={setPayoutProcessing}
+                      entityId={payout.id}
                       title="Mark Payout as Processing"
                       description="This indicates you have started the bank or mobile money transfer. Move the payout to PROCESSING status?"
                       label="Mark Processing"
@@ -257,7 +258,8 @@ export default async function AdminPayoutDetailPage({
                       </p>
                     </div>
                     <ConfirmActionForm
-                      action={() => markPayoutFailed(payoutId)}
+                      action={markPayoutFailed}
+                      entityId={payout.id}
                       title="Mark Payout as Failed"
                       description="This will mark the payout as FAILED and return all linked commissions to PENDING status so they can be included in a future payout batch. This cannot be undone."
                       label="Mark Failed"

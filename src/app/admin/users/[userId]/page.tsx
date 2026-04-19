@@ -74,7 +74,8 @@ export default async function AdminUserDetailPage({
         {/* Action */}
         {isActive ? (
           <ConfirmActionForm
-            action={(reason) => suspendUser(user.id, reason ?? "")}
+            action={suspendUser}
+            entityId={user.id}
             title="Suspend User"
             description={`Suspend ${user.email}? They will lose platform access and receive a notification email.`}
             label="Suspend User"
@@ -84,7 +85,8 @@ export default async function AdminUserDetailPage({
           />
         ) : (
           <ConfirmActionForm
-            action={() => activateUser(user.id)}
+            action={activateUser}
+            entityId={user.id}
             title="Reactivate User"
             description={`Reactivate ${user.email}? They will regain full platform access.`}
             label="Activate User"

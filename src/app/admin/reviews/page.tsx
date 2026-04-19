@@ -243,14 +243,16 @@ export default async function AdminReviewsPage({
                     {/* Action buttons */}
                     <div className="flex gap-2 shrink-0">
                       <ConfirmActionForm
-                        action={() => flagReview(review.id)}
+                        action={flagReview}
+                        entityId={review.id}
                         title="Flag Review"
                         description="Flag this review for moderation follow-up? The review will remain visible but an audit log entry will be created."
                         label="Flag"
                         variant="outline"
                       />
                       <ConfirmActionForm
-                        action={() => removeReview(review.id)}
+                        action={removeReview}
+                        entityId={review.id}
                         title="Remove Review"
                         description="Permanently remove this review? This action cannot be undone."
                         label="Remove"

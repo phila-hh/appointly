@@ -173,9 +173,8 @@ export default async function AdminBusinessesPage({
                   <TableCell className="text-right">
                     {business.isActive ? (
                       <ConfirmActionForm
-                        action={(reason) =>
-                          suspendBusiness(business.id, reason ?? "")
-                        }
+                        action={suspendBusiness}
+                        entityId={business.id}
                         title="Suspend Business"
                         description={`Suspend "${business.name}"? It will be hidden from public listings and the owner will be notified.`}
                         label="Suspend"
@@ -185,7 +184,8 @@ export default async function AdminBusinessesPage({
                       />
                     ) : (
                       <ConfirmActionForm
-                        action={() => activateBusiness(business.id)}
+                        action={activateBusiness}
+                        entityId={business.id}
                         title="Activate Business"
                         description={`Reactivate "${business.name}"? It will become visible in public listings again.`}
                         label="Activate"

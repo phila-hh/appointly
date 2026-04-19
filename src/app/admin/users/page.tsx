@@ -176,9 +176,8 @@ export default async function AdminUsersPage({
                     <TableCell className="text-right">
                       {isActive ? (
                         <ConfirmActionForm
-                          action={(reason) =>
-                            suspendUser(user.id, reason ?? "")
-                          }
+                          action={suspendUser}
+                          entityId={user.id}
                           title="Suspend User"
                           description={`Are you sure you want to suspend ${user.email}? They will be notified by email.`}
                           label="Suspend"
@@ -188,7 +187,8 @@ export default async function AdminUsersPage({
                         />
                       ) : (
                         <ConfirmActionForm
-                          action={() => activateUser(user.id)}
+                          action={activateUser}
+                          entityId={user.id}
                           title="Reactivate User"
                           description={`Reactivate ${user.email}? They will regain full platform access.`}
                           label="Activate"
