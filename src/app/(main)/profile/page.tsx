@@ -35,6 +35,7 @@ export default async function ProfilePage() {
     where: { id: user.id },
     select: {
       id: true,
+      role: true,
       name: true,
       email: true,
       phone: true,
@@ -87,15 +88,17 @@ export default async function ProfilePage() {
         )}
 
         {/* Email preferences */}
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold">Email Notifications</h2>
-            <p className="text-sm text-muted-foreground">
-              Choose which emails you&apos;d like to receive from Appointly.
-            </p>
-          </div>
-          <EmailPreferences initialPreferences={emailPreferences} />
-        </section>
+        {user.role !== "ADMIN" && (
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Email Notifications</h2>
+              <p className="text-sm text-muted-foreground">
+                Choose which emails you&apos;d like to receive from Appointly.
+              </p>
+            </div>
+            <EmailPreferences initialPreferences={emailPreferences} />
+          </section>
+        )}
       </div>
     </div>
   );

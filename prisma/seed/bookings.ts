@@ -1,17 +1,17 @@
 /**
- * @file Seed bookings — massive variety of bookings covering all statuses,
- * edge cases, and date ranges (past, present, future)
+ * @file Seed bookings.
+ *
+ * Date window: 2025-07-01 → 2026-06-30
+ *
+ * Demo businesses get 80+ bookings each with maximum variety.
+ * Regular businesses get 8-20 bookings each.
+ * Demo customers get bookings spread across many businesses.
  */
 
-import {
-  getPrisma,
-  getDateThisMonth,
-  getDateLastMonth,
-  getDateNextMonth,
-  addMinutesToTime,
-} from "./helpers";
-import type { SeededService } from "./services";
+import { getPrisma, d, addMinutes, TIME_SLOTS, pick } from "./helpers";
 import type { SeededBusiness } from "./businesses";
+import type { SeededService } from "./services";
+import type { SeededStaff } from "./staff";
 import type { BookingStatus } from "@/generated/prisma/client";
 
 export interface SeededBooking {
@@ -19,313 +19,334 @@ export interface SeededBooking {
   customerId: string;
   businessId: string;
   serviceId: string;
+  staffId: string | null;
   status: BookingStatus;
   totalPrice: number;
   date: Date;
+  isDemo: boolean;
 }
 
-interface BookingDef {
-  customerIndex: number;
-  businessIndex: number;
-  serviceFilter: (s: SeededService) => boolean;
-  day: number;
-  month: "last" | "this" | "next";
+// Pre-built date list across the window (2025-07 → 2026-06)
+const WINDOW_DATES: Date[] = [];
+for (let m = 0; m < 12; m++) {
+  const year = m < 6 ? 2025 : 2026;
+  const month = m < 6 ? 7 + m : 1 + (m - 6); // Jul2025..Dec2025, Jan2026..Jun2026
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  for (let day = 1; day <= daysInMonth; day++) {
+    WINDOW_DATES.push(d(year, month, day));
+  }
+}
+
+const NOTES = [
+  null,
+  null,
+  null, // most bookings have no notes
+  "First time visit. Looking forward to it!",
+  "Please be gentle, I have sensitive skin.",
+  "Referred by a friend. Excited to try your services.",
+  "Running a bit late, please hold my appointment.",
+  "It's my birthday! Celebrating with this booking.",
+  "Can I pay with TeleBirr on arrival?",
+  "Need to finish by noon — have another appointment.",
+  "Allergic to latex — will discuss on arrival.",
+  "Same style as last time please.",
+  "Please use organic products only.",
+  "ውድ ስራ ነው! ደስ ይለኛል — excited!",
+  "Emergency booking. Really need this today.",
+  "Can I bring my friend along to watch?",
+  "Repeat customer — please note I prefer the corner seat.",
+];
+
+function noteFor(i: number): string | null {
+  return NOTES[i % NOTES.length];
+}
+
+function statusForDate(date: Date, i: number): BookingStatus {
+  const now = new Date();
+  const isPast = date < now;
+  if (isPast) {
+    // Past bookings: mostly COMPLETED, some CANCELLED, some NO_SHOW
+    const r = i % 10;
+    if (r < 7) return "COMPLETED";
+    if (r < 9) return "CANCELLED";
+    return "NO_SHOW";
+  } else {
+    // Future bookings: CONFIRMED, PENDING, CANCELLED
+    const r = i % 10;
+    if (r < 5) return "CONFIRMED";
+    if (r < 8) return "PENDING";
+    return "CANCELLED";
+  }
+}
+
+interface BookingRow {
+  customerId: string;
+  businessId: string;
+  serviceId: string;
+  staffId: string | null;
+  date: Date;
   startTime: string;
+  endTime: string;
   status: BookingStatus;
-  notes?: string;
-  isCancellable?: boolean;
-  cancellationFee?: number;
+  notes: string | null;
+  totalPrice: number;
+  isCancellable: boolean;
+  cancellationFee: number;
+  cancellationDeadline: Date | null;
 }
 
 export async function seedBookings(
-  customerIds: string[],
+  allCustomerIds: string[],
+  demoCustomerIds: string[],
   businesses: SeededBusiness[],
-  services: SeededService[]
+  services: SeededService[],
+  allStaff: SeededStaff[]
 ): Promise<SeededBooking[]> {
   const prisma = getPrisma();
   console.log("📅 Creating bookings...");
 
-  const getServiceForBusiness = (
-    bizIndex: number,
-    filter?: (s: SeededService) => boolean
-  ): SeededService => {
-    const bizServices = services.filter(
-      (s) => s.businessId === businesses[bizIndex].id && s.isActive
-    );
-    if (filter) {
-      const filtered = bizServices.filter(filter);
-      if (filtered.length > 0)
-        return filtered[Math.floor(Math.random() * filtered.length)];
-    }
-    return bizServices[Math.floor(Math.random() * bizServices.length)];
+  const rows: (BookingRow & { isDemo: boolean })[] = [];
+
+  const svcFor = (bizId: string) =>
+    services.filter((s) => s.businessId === bizId && s.isActive);
+
+  const staffFor = (bizId: string) =>
+    allStaff.filter((s) => s.businessId === bizId && s.isActive);
+
+  const pickStaff = (bizId: string): string | null => {
+    const s = staffFor(bizId);
+    return s.length > 0 ? pick(s).id : null;
   };
 
-  const getDate = (month: "last" | "this" | "next", day: number): Date => {
-    switch (month) {
-      case "last":
-        return getDateLastMonth(day);
-      case "next":
-        return getDateNextMonth(day);
-      default:
-        return getDateThisMonth(day);
+  // ─────────────────────────────────────────────────────────────────────────
+  // DEMO businesses — 90 bookings each, maximally varied
+  // ─────────────────────────────────────────────────────────────────────────
+  for (let bi = 0; bi < 3; bi++) {
+    const biz = businesses[bi];
+    const svcs = svcFor(biz.id);
+    if (svcs.length === 0) continue;
+
+    // 90 dates spread evenly across the 12-month window
+    const step = Math.floor(WINDOW_DATES.length / 90);
+    for (let i = 0; i < 90; i++) {
+      const dateIdx = (i * step + bi * 30) % WINDOW_DATES.length;
+      const date = WINDOW_DATES[dateIdx];
+      const svc = svcs[i % svcs.length];
+      const startTime = TIME_SLOTS[i % TIME_SLOTS.length];
+      const endTime = addMinutes(startTime, svc.duration);
+      const status = statusForDate(date, i);
+      const note = noteFor(i);
+
+      // Rotate through all customers — demo customers get ~30% share
+      let custId: string;
+      if (i % 3 === 0) {
+        custId = demoCustomerIds[i % demoCustomerIds.length];
+      } else {
+        custId = allCustomerIds[i % allCustomerIds.length];
+      }
+
+      const cancDl = new Date(date);
+      cancDl.setUTCDate(cancDl.getUTCDate() - 1);
+
+      rows.push({
+        customerId: custId,
+        businessId: biz.id,
+        serviceId: svc.id,
+        staffId: pickStaff(biz.id),
+        date,
+        startTime,
+        endTime,
+        status,
+        notes: note,
+        totalPrice: svc.price,
+        isCancellable: i % 15 !== 0, // edge: some non-cancellable
+        cancellationFee: i % 7 === 0 ? 100 : 0,
+        cancellationDeadline: ["CONFIRMED", "PENDING"].includes(status)
+          ? cancDl
+          : null,
+        isDemo: true,
+      });
     }
-  };
-
-  // Generate a comprehensive list of bookings
-  const bookingDefs: BookingDef[] = [];
-
-  const startTimes = [
-    "08:00",
-    "08:30",
-    "09:00",
-    "09:30",
-    "10:00",
-    "10:30",
-    "11:00",
-    "11:30",
-    "12:00",
-    "13:00",
-    "13:30",
-    "14:00",
-    "14:30",
-    "15:00",
-    "15:30",
-    "16:00",
-    "16:30",
-    "17:00",
-    "17:30",
-    "18:00",
-    "18:30",
-    "19:00",
-  ];
-
-  const noteOptions = [
-    null,
-    "First time visit. Excited to try your services!",
-    "Please be gentle, I have sensitive skin.",
-    "Referred by a friend. Looking forward to it.",
-    "Running a bit late, please hold my spot.",
-    "Celebration booking — it's my birthday!",
-    "Can I get a complimentary drink?",
-    "Need to finish by noon, have another appointment.",
-    "Allergic to certain products — will discuss on arrival.",
-    "Bringing my child along, hope that's okay.",
-    "Want the same style as last time.",
-    "Please use organic/natural products only.",
-    "ውድ ስራ ነው! ደስ ይለኛል (Great work! I'm happy)", // Amharic note edge case
-    "Can I pay with mobile money (TeleBirr)?",
-    "Emergency booking — really need this today.",
-    "",
-  ];
-
-  // === COMPLETED bookings (mostly last month, some this month) ===
-  // Create ~200 completed bookings spread across businesses and customers
-  for (let i = 0; i < 200; i++) {
-    const customerIdx = i % customerIds.length;
-    const bizIdx = i % businesses.length;
-    const day = (i % 28) + 1;
-    const month = i < 120 ? "last" : "this";
-    const timeIdx = i % startTimes.length;
-
-    bookingDefs.push({
-      customerIndex: customerIdx,
-      businessIndex: bizIdx,
-      serviceFilter: () => true,
-      day,
-      month,
-      startTime: startTimes[timeIdx],
-      status: "COMPLETED",
-      notes: noteOptions[i % noteOptions.length] || undefined,
-    });
   }
 
-  // === CONFIRMED bookings (this month and next month) ===
-  for (let i = 0; i < 80; i++) {
-    const customerIdx = (i + 30) % customerIds.length;
-    const bizIdx = (i + 5) % businesses.length;
-    const day = (i % 28) + 1;
-    const month = i < 40 ? "this" : "next";
-    const timeIdx = (i + 3) % startTimes.length;
-
-    bookingDefs.push({
-      customerIndex: customerIdx,
-      businessIndex: bizIdx,
-      serviceFilter: () => true,
-      day,
-      month,
-      startTime: startTimes[timeIdx],
-      status: "CONFIRMED",
-      notes: noteOptions[(i + 5) % noteOptions.length] || undefined,
-    });
-  }
-
-  // === PENDING bookings (this month and next month) ===
-  for (let i = 0; i < 60; i++) {
-    const customerIdx = (i + 50) % customerIds.length;
-    const bizIdx = (i + 10) % businesses.length;
-    const day = (i % 28) + 1;
-    const month = i < 20 ? "this" : "next";
-    const timeIdx = (i + 7) % startTimes.length;
-
-    bookingDefs.push({
-      customerIndex: customerIdx,
-      businessIndex: bizIdx,
-      serviceFilter: () => true,
-      day,
-      month,
-      startTime: startTimes[timeIdx],
-      status: "PENDING",
-      notes: noteOptions[(i + 8) % noteOptions.length] || undefined,
-    });
-  }
-
-  // === CANCELLED bookings (spread across all months) ===
-  for (let i = 0; i < 50; i++) {
-    const customerIdx = (i + 70) % customerIds.length;
-    const bizIdx = (i + 15) % businesses.length;
-    const day = (i % 28) + 1;
-    const month: "last" | "this" | "next" =
-      i < 20 ? "last" : i < 40 ? "this" : "next";
-    const timeIdx = (i + 11) % startTimes.length;
-
-    bookingDefs.push({
-      customerIndex: customerIdx,
-      businessIndex: bizIdx,
-      serviceFilter: () => true,
-      day,
-      month,
-      startTime: startTimes[timeIdx],
-      status: "CANCELLED",
+  // Extra bookings for demo customers at DEMO businesses (high activity demo customers)
+  // James Wilson — 40 extra bookings across all 3 demo businesses
+  for (let i = 0; i < 40; i++) {
+    const bizIdx = i % 3;
+    const biz = businesses[bizIdx];
+    const svcs = svcFor(biz.id);
+    if (svcs.length === 0) continue;
+    const dateIdx = (i * 9 + 10) % WINDOW_DATES.length;
+    const date = WINDOW_DATES[dateIdx];
+    const svc = svcs[i % svcs.length];
+    const startTime = TIME_SLOTS[(i + 4) % TIME_SLOTS.length];
+    const status = statusForDate(date, i + 3);
+    rows.push({
+      customerId: demoCustomerIds[0],
+      businessId: biz.id,
+      serviceId: svc.id,
+      staffId: pickStaff(biz.id),
+      date,
+      startTime,
+      endTime: addMinutes(startTime, svc.duration),
+      status,
+      notes: noteFor(i + 10),
+      totalPrice: svc.price,
       isCancellable: true,
-      cancellationFee: i % 3 === 0 ? 100 : 0, // Some have cancellation fees
-      notes:
-        i % 4 === 0
-          ? "Had an emergency, sorry for cancelling."
-          : i % 4 === 1
-            ? "Schedule conflict — will rebook soon."
-            : undefined,
+      cancellationFee: 0,
+      cancellationDeadline: null,
+      isDemo: true,
     });
   }
 
-  // === NO_SHOW bookings (mostly last month) ===
-  for (let i = 0; i < 30; i++) {
-    const customerIdx = (i + 90) % customerIds.length;
-    const bizIdx = (i + 20) % businesses.length;
-    const day = (i % 28) + 1;
-    const timeIdx = (i + 13) % startTimes.length;
-
-    bookingDefs.push({
-      customerIndex: customerIdx,
-      businessIndex: bizIdx,
-      serviceFilter: () => true,
-      day,
-      month: "last",
-      startTime: startTimes[timeIdx],
-      status: "NO_SHOW",
-      notes: undefined,
+  // Sarah Chen — 35 extra bookings mostly at Spa and Salon businesses
+  for (let i = 0; i < 35; i++) {
+    const bizIdx =
+      i % 2 === 0 ? 1 : Math.min(5 + (i % 4), businesses.length - 1);
+    const biz = businesses[bizIdx];
+    const svcs = svcFor(biz.id);
+    if (svcs.length === 0) continue;
+    const dateIdx = (i * 11 + 20) % WINDOW_DATES.length;
+    const date = WINDOW_DATES[dateIdx];
+    const svc = svcs[i % svcs.length];
+    const startTime = TIME_SLOTS[(i + 6) % TIME_SLOTS.length];
+    const status = statusForDate(date, i + 1);
+    rows.push({
+      customerId: demoCustomerIds[1],
+      businessId: biz.id,
+      serviceId: svc.id,
+      staffId: pickStaff(biz.id),
+      date,
+      startTime,
+      endTime: addMinutes(startTime, svc.duration),
+      status,
+      notes: noteFor(i + 5),
+      totalPrice: svc.price,
+      isCancellable: i % 10 !== 0,
+      cancellationFee: i % 5 === 0 ? 200 : 0,
+      cancellationDeadline: null,
+      isDemo: true,
     });
   }
 
-  // === Edge case bookings ===
-  // Multiple bookings same customer same business (loyal customer)
-  for (let visit = 0; visit < 8; visit++) {
-    bookingDefs.push({
-      customerIndex: 0,
-      businessIndex: 0,
-      serviceFilter: () => true,
-      day: visit * 3 + 1,
-      month: "last",
-      startTime: "10:00",
-      status: "COMPLETED",
-      notes: `Regular visit #${visit + 1}`,
+  // David Kim — 35 extra bookings heavy on Fitness and Barbershop
+  for (let i = 0; i < 35; i++) {
+    const bizIdx =
+      i % 2 === 0
+        ? 2
+        : i % 3 === 1
+          ? 0
+          : Math.min(13 + (i % 3), businesses.length - 1);
+    const biz = businesses[bizIdx];
+    const svcs = svcFor(biz.id);
+    if (svcs.length === 0) continue;
+    const dateIdx = (i * 7 + 5) % WINDOW_DATES.length;
+    const date = WINDOW_DATES[dateIdx];
+    const svc = svcs[i % svcs.length];
+    const startTime = TIME_SLOTS[(i + 2) % TIME_SLOTS.length];
+    const status = statusForDate(date, i + 2);
+    rows.push({
+      customerId: demoCustomerIds[2],
+      businessId: biz.id,
+      serviceId: svc.id,
+      staffId: pickStaff(biz.id),
+      date,
+      startTime,
+      endTime: addMinutes(startTime, svc.duration),
+      status,
+      notes: noteFor(i),
+      totalPrice: svc.price,
+      isCancellable: true,
+      cancellationFee: 0,
+      cancellationDeadline: null,
+      isDemo: true,
     });
   }
 
-  // Customer booking with non-cancellable flag
-  bookingDefs.push({
-    customerIndex: 5,
-    businessIndex: 2,
-    serviceFilter: () => true,
-    day: 15,
-    month: "next",
-    startTime: "14:00",
-    status: "CONFIRMED",
-    isCancellable: false,
-    notes: "Non-cancellable promotional booking.",
-  });
+  // ─────────────────────────────────────────────────────────────────────────
+  // Regular businesses — 10-18 bookings each
+  // ─────────────────────────────────────────────────────────────────────────
+  for (let bi = 3; bi < businesses.length; bi++) {
+    const biz = businesses[bi];
+    const svcs = svcFor(biz.id);
+    if (svcs.length === 0) continue;
 
-  // Very early morning booking
-  bookingDefs.push({
-    customerIndex: 10,
-    businessIndex: 5,
-    serviceFilter: () => true,
-    day: 10,
-    month: "this",
-    startTime: "07:00",
-    status: "CONFIRMED",
-    notes: "Early bird appointment.",
-  });
+    const count = 10 + (bi % 9); // 10-18
+    for (let i = 0; i < count; i++) {
+      const dateIdx = (bi * 7 + i * 13) % WINDOW_DATES.length;
+      const date = WINDOW_DATES[dateIdx];
+      const svc = svcs[i % svcs.length];
+      const startTime = TIME_SLOTS[(bi + i) % TIME_SLOTS.length];
+      const status = statusForDate(date, i);
+      const custId = allCustomerIds[(bi + i * 3) % allCustomerIds.length];
 
-  // Late evening booking
-  bookingDefs.push({
-    customerIndex: 15,
-    businessIndex: 3,
-    serviceFilter: () => true,
-    day: 18,
-    month: "this",
-    startTime: "19:00",
-    status: "PENDING",
-    notes: "Can you stay open a bit late for me?",
-  });
+      rows.push({
+        customerId: custId,
+        businessId: biz.id,
+        serviceId: svc.id,
+        staffId: pickStaff(biz.id),
+        date,
+        startTime,
+        endTime: addMinutes(startTime, svc.duration),
+        status,
+        notes: noteFor(bi + i),
+        totalPrice: svc.price,
+        isCancellable: true,
+        cancellationFee: 0,
+        cancellationDeadline: null,
+        isDemo: false,
+      });
+    }
+  }
 
-  // Now create all bookings
-  const seededBookings: SeededBooking[] = [];
-
-  for (const def of bookingDefs) {
-    const service = getServiceForBusiness(def.businessIndex, def.serviceFilter);
-    if (!service) continue;
-
-    const date = getDate(def.month, def.day);
-    const endTime = addMinutesToTime(def.startTime, service.duration);
-
-    // Calculate cancellation deadline (24 hours before booking)
-    const cancellationDeadline = new Date(date);
-    cancellationDeadline.setDate(cancellationDeadline.getDate() - 1);
-
+  // ─────────────────────────────────────────────────────────────────────────
+  // Persist
+  // ─────────────────────────────────────────────────────────────────────────
+  const seeded: SeededBooking[] = [];
+  for (const row of rows) {
     try {
-      const booking = await prisma.booking.create({
+      const b = await prisma.booking.create({
         data: {
-          customerId: customerIds[def.customerIndex],
-          businessId: businesses[def.businessIndex].id,
-          serviceId: service.id,
-          date,
-          startTime: def.startTime,
-          endTime,
-          status: def.status,
-          totalPrice: service.price,
-          notes: def.notes,
-          isCancellable:
-            def.isCancellable !== undefined ? def.isCancellable : true,
-          cancellationDeadline:
-            def.status !== "COMPLETED" ? cancellationDeadline : null,
-          cancellationFee: def.cancellationFee || 0,
+          customerId: row.customerId,
+          businessId: row.businessId,
+          serviceId: row.serviceId,
+          staffId: row.staffId,
+          date: row.date,
+          startTime: row.startTime,
+          endTime: row.endTime,
+          status: row.status,
+          notes: row.notes,
+          totalPrice: row.totalPrice,
+          isCancellable: row.isCancellable,
+          cancellationFee: row.cancellationFee,
+          cancellationDeadline: row.cancellationDeadline,
         },
       });
-
-      seededBookings.push({
-        id: booking.id,
-        customerId: booking.customerId,
-        businessId: booking.businessId,
-        serviceId: booking.serviceId,
-        status: booking.status as BookingStatus,
-        totalPrice: Number(booking.totalPrice),
-        date: booking.date,
+      seeded.push({
+        id: b.id,
+        customerId: b.customerId,
+        businessId: b.businessId,
+        serviceId: b.serviceId,
+        staffId: b.staffId,
+        status: b.status as BookingStatus,
+        totalPrice: Number(b.totalPrice),
+        date: b.date,
+        isDemo: row.isDemo,
       });
     } catch {
-      // Skip duplicate/conflict bookings silently
+      // skip
     }
   }
 
-  console.log(`✅ Created ${seededBookings.length} bookings.\n`);
-  return seededBookings;
+  const statusCounts = seeded.reduce(
+    (acc, b) => {
+      acc[b.status] = (acc[b.status] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+
+  console.log(`✅ Created ${seeded.length} bookings.`);
+  console.log(`   ${JSON.stringify(statusCounts)}\n`);
+  return seeded;
 }

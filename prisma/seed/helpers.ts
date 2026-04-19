@@ -1,5 +1,5 @@
 /**
- * @file Shared helpers for seed data generation
+ * @file Shared helpers and Prisma singleton for all seed modules.
  */
 
 import { PrismaClient } from "@/generated/prisma/client";
@@ -17,60 +17,99 @@ export function getPrisma(): PrismaClient {
   return _prisma;
 }
 
-/**
- * Get a date in the current month, clamped to valid range.
- */
-export function getDateThisMonth(day: number): Date {
-  const now = new Date();
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const safeDay = Math.min(Math.max(day, 1), lastDay);
-  return new Date(now.getFullYear(), now.getMonth(), safeDay);
+// ---------------------------------------------------------------------------
+// Date helpers — window 2025-07 to 2026-06
+// ---------------------------------------------------------------------------
+
+/** Return a Date at midnight UTC for a given year, month (1-indexed), day. */
+export function d(year: number, month: number, day: number): Date {
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
-/**
- * Get a date in the previous month.
- */
-export function getDateLastMonth(day: number): Date {
-  const now = new Date();
-  const lastDay = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
-  const safeDay = Math.min(Math.max(day, 1), lastDay);
-  return new Date(now.getFullYear(), now.getMonth() - 1, safeDay);
+/** Spread dates evenly across the whole window (2025-07 → 2026-06). */
+export function windowDate(indexInTotal: number, total: number): Date {
+  // Window: 2025-07-01 = day 0, 2026-06-30 = day 364
+  const startMs = Date.UTC(2025, 6, 1); // July 1 2025
+  const endMs = Date.UTC(2026, 5, 30); // June 30 2026
+  const span = endMs - startMs;
+  const offset = Math.floor((indexInTotal / total) * span);
+  const ms = startMs + offset;
+  return new Date(ms);
 }
 
-/**
- * Get a date in the next month.
- */
-export function getDateNextMonth(day: number): Date {
-  const now = new Date();
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 2, 0).getDate();
-  const safeDay = Math.min(Math.max(day, 1), lastDay);
-  return new Date(now.getFullYear(), now.getMonth() + 1, safeDay);
+/** Clamp a day number to the actual days in a given month. */
+export function clampDay(year: number, month: number, day: number): number {
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return Math.min(Math.max(day, 1), last);
 }
 
-/**
- * Calculate end time given start time and duration in minutes.
- */
-export function addMinutesToTime(time: string, minutes: number): string {
+/** Add minutes to an "HH:mm" string, returns "HH:mm". */
+export function addMinutes(time: string, mins: number): string {
   const [h, m] = time.split(":").map(Number);
-  const totalMinutes = h * 60 + m + minutes;
-  const newH = Math.floor(totalMinutes / 60) % 24;
-  const newM = totalMinutes % 60;
-  return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
+  const total = h * 60 + m + mins;
+  const nh = Math.floor(total / 60) % 24;
+  const nm = total % 60;
+  return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
 }
 
-/**
- * Generate a slug from a business name.
- */
-export function slugify(name: string): string {
-  return name
+/** Generate a unique Chapa-style transaction reference. */
+let _refCounter = 1;
+export function chapaRef(): string {
+  return `appointly-${String(_refCounter++).padStart(5, "0")}-${Date.now()}`;
+}
+
+/** Slugify a business name. */
+export function slugify(name: string, suffix = ""): string {
+  const base = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+  return suffix ? `${base}-${suffix}` : base;
 }
 
-/**
- * Generate a unique Chapa transaction reference.
- */
-export function chapaRef(index: number): string {
-  return `appointly-seed-${String(index).padStart(4, "0")}-${Date.now()}`;
+/** Pick a random element from an array. */
+export function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
 }
+
+/** Pick N unique random elements from an array. */
+export function pickN<T>(arr: T[], n: number): T[] {
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(n, arr.length));
+}
+
+/** Round a number to 2 decimal places (for ETB amounts). */
+export function etb(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
+// ---------------------------------------------------------------------------
+// Shared time-slot pool
+// ---------------------------------------------------------------------------
+export const TIME_SLOTS = [
+  "07:00",
+  "07:30",
+  "08:00",
+  "08:30",
+  "09:00",
+  "09:30",
+  "10:00",
+  "10:30",
+  "11:00",
+  "11:30",
+  "12:00",
+  "12:30",
+  "13:00",
+  "13:30",
+  "14:00",
+  "14:30",
+  "15:00",
+  "15:30",
+  "16:00",
+  "16:30",
+  "17:00",
+  "17:30",
+  "18:00",
+  "18:30",
+  "19:00",
+];

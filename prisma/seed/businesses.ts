@@ -1,687 +1,806 @@
 /**
- * @file Seed businesses — 55 businesses across all 13 categories
- * Localized to Ethiopian cities, addresses, and context
+ * @file Seed businesses — localized.
+ *
+ * Index 0,1,2 are DEMO businesses (owned by demoOwners[0,1,2]):
+ *   0 → Habesha Cuts Barbershop  (BARBERSHOP)  — Mekelle
+ *   1 → Axum Wellness Spa        (SPA)          — Mekelle
+ *   2 → Tigray Fitness Hub       (FITNESS)      — Mekelle
  */
 
 import { getPrisma, slugify } from "./helpers";
-import type { BusinessCategory } from "@/generated/prisma/client";
+import type { SeededUsers } from "./users";
+import { BusinessCategory } from "@/generated/prisma/client";
 
 export interface SeededBusiness {
   id: string;
   name: string;
-  category: BusinessCategory;
+  slug: string;
+  category: string;
   ownerId: string;
-}
-
-interface BusinessDef {
-  name: string;
-  category: BusinessCategory;
-  description: string;
-  phone: string;
-  email: string;
-  website: string;
-  address: string;
-  city: string;
+  isDemo: boolean;
 }
 
 export async function seedBusinesses(
-  ownerIds: string[]
+  users: SeededUsers
 ): Promise<SeededBusiness[]> {
   const prisma = getPrisma();
   console.log("🏪 Creating businesses...");
 
-  const defs: BusinessDef[] = [
-    // BARBERSHOP (5)
+  type BizDef = {
+    name: string;
+    category: string;
+    description: string;
+    phone: string;
+    email: string;
+    website: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    isActive?: boolean;
+  };
+
+  const S = "Tigray";
+
+  const allDefs: BizDef[] = [
+    // ── DEMO 0: Habesha Cuts Barbershop ───────────────────────────────────
     {
-      name: "Fresh Cuts Barbershop",
+      name: "Habesha Cuts Barbershop",
       category: "BARBERSHOP",
       description:
-        "Premium barbershop offering classic and modern cuts in Bole. Experienced barbers specializing in fades, beard grooming, and hot towel shaves.",
-      phone: "+251-911-300001",
-      email: "info@freshcuts.example.com",
-      website: "https://freshcuts.example.com",
-      address: "Bole Road, Friendship Building, 3rd Floor",
-      city: "Addis Ababa",
+        "Mekelle's premier barbershop near Hawelti. Expert barbers delivering precision fades, beard grooming, hot towel shaves, and classic cuts. Walk-ins welcome, appointments preferred. Serving the community since 2018.",
+      phone: "+251-914-500001",
+      email: "info@habeshcuts.example.com",
+      website: "https://habeshcuts.example.com",
+      address: "Hawelti, near Yohannes IV Statue",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
+    // ── DEMO 1: Axum Wellness Spa ─────────────────────────────────────────
     {
-      name: "Arada Mens Grooming",
-      category: "BARBERSHOP",
+      name: "Axum Wellness Spa",
+      category: "SPA",
       description:
-        "Traditional Ethiopian barbershop in the heart of Arada. Classic cuts, modern styles, and professional grooming services for the distinguished gentleman.",
-      phone: "+251-911-300002",
-      email: "arada.grooming@gmail.com",
-      website: "https://aradagrooming.example.com",
-      address: "Arada Sub-City, Piassa, near Cinema Ethiopia",
-      city: "Addis Ababa",
+        "A full-service wellness spa in Adi Haki, Mekelle. Swedish massage, deep tissue therapy, luxury facials, Ethiopian coffee scrubs, and couples packages by certified therapists in a tranquil setting.",
+      phone: "+251-914-500002",
+      email: "hello@axumwellness.example.com",
+      website: "https://axumwellness.example.com",
+      address: "Adi Haki, Axum Hotel Building, Ground Floor",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
+    // ── DEMO 2: Tigray Fitness Hub ────────────────────────────────────────
     {
-      name: "Kings Barbershop Hawassa",
-      category: "BARBERSHOP",
+      name: "Tigray Fitness Hub",
+      category: "FITNESS",
       description:
-        "Hawassa's finest barbershop. Expert barbers delivering precision cuts, razor-sharp lineups, and premium beard care in a modern setting by the lake.",
-      phone: "+251-911-300003",
-      email: "kings.hawassa@gmail.com",
-      website: "https://kingsbarbershop.example.com",
-      address: "Lake Hawassa Road, near Lewi Resort",
-      city: "Hawassa",
-    },
-    {
-      name: "Dire Dawa Classic Cuts",
-      category: "BARBERSHOP",
-      description:
-        "Established in 2015, Dire Dawa Classic Cuts brings big-city barbering quality to the eastern gateway of Ethiopia. Walk-ins always welcome.",
-      phone: "+251-911-300004",
-      email: "diredawa.cuts@gmail.com",
-      website: "https://diredawacuts.example.com",
-      address: "Kezira, near Dire Dawa Train Station",
-      city: "Dire Dawa",
-    },
-    {
-      name: "Blade Masters Bahir Dar",
-      category: "BARBERSHOP",
-      description:
-        "Blade Masters offers the best fades and grooming in Bahir Dar. Located steps from the Blue Nile, our skilled barbers deliver consistent quality.",
-      phone: "+251-911-300005",
-      email: "blademasters.bd@gmail.com",
-      website: "https://blademasters.example.com",
-      address: "Kebele 14, near Blue Nile Bridge",
-      city: "Bahir Dar",
+        "Modern gym and wellness center in Kedamay Weyane, Mekelle. Personal training, CrossFit, yoga, group fitness, nutrition consultations, and body assessments. State-of-the-art equipment, certified coaches.",
+      phone: "+251-914-500003",
+      email: "contact@tigrayfitness.example.com",
+      website: "https://tigrayfitness.example.com",
+      address: "Kedamay Weyane, near Ayder Hospital",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
 
-    // SALON (5)
+    // ── Regular businesses (52, indexes 3–54) ──────────────────────────────
+    // BARBERSHOP
+    {
+      name: "Adwa Mens Grooming",
+      category: "BARBERSHOP",
+      description:
+        "Traditional barbershop in the heart of Adwa. Classic cuts, modern styles, and professional grooming for the distinguished gentleman of Adwa.",
+      phone: "+251-914-500004",
+      email: "adwa.grooming@gmail.com",
+      website: "https://adwagrooming.example.com",
+      address: "Main Road, near Adwa Market",
+      city: "Adwa",
+      state: S,
+      zipCode: "7200",
+    },
+    {
+      name: "Kings Barbershop Axum",
+      category: "BARBERSHOP",
+      description:
+        "Axum's finest barbershop. Expert cuts, razor lineups, and beard care in the shadow of the ancient Obelisks. Walk-ins welcome.",
+      phone: "+251-914-500005",
+      email: "kings.axum@gmail.com",
+      website: "https://kingsaxum.example.com",
+      address: "Near Axum Obelisk, Tsion Road",
+      city: "Axum",
+      state: S,
+      zipCode: "7210",
+    },
+    {
+      name: "Blade Masters Adigrat",
+      category: "BARBERSHOP",
+      description:
+        "Premium fades and grooming in Adigrat. Consistent quality every visit. Serving students and professionals since 2019.",
+      phone: "+251-914-500006",
+      email: "blademasters.adigrat@gmail.com",
+      website: "https://blademastersadigrat.example.com",
+      address: "Near Adigrat University Main Gate",
+      city: "Adigrat",
+      state: S,
+      zipCode: "7400",
+    },
+    // SALON
     {
       name: "Selam Beauty Salon",
       category: "SALON",
       description:
-        "Full-service beauty salon specializing in Ethiopian braiding, keratin treatments, nail art, and bridal packages. Our stylists bring decades of combined experience.",
-      phone: "+251-911-300006",
-      email: "selam.beauty@gmail.com",
-      website: "https://selambeauty.example.com",
-      address: "Megenagna, Yerer Building, 2nd Floor",
-      city: "Addis Ababa",
+        "Full-service beauty salon in Mekelle. Tigrinya braiding, keratin treatments, nail art, and bridal packages. Decades of combined experience.",
+      phone: "+251-914-500007",
+      email: "selam.beauty.mk@gmail.com",
+      website: "https://selambeautymk.example.com",
+      address: "Kebelle 16, near Romanat Square",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
       name: "Genet Hair Studio",
       category: "SALON",
       description:
-        "Modern hair studio in Sarbet with a focus on natural hair care, coloring, and styling. We use premium imported and locally-sourced products.",
-      phone: "+251-911-300007",
-      email: "genet.studio@gmail.com",
-      website: "https://genetstudio.example.com",
-      address: "Sarbet, behind Total Gas Station",
-      city: "Addis Ababa",
+        "Modern hair studio near Ayder. Natural hair care, coloring, and styling with premium products imported and locally sourced.",
+      phone: "+251-914-500008",
+      email: "genet.studio.mk@gmail.com",
+      website: "https://genetstudiomk.example.com",
+      address: "Ayder Subcity, behind CBE branch",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
+    },
+    {
+      name: "Queen Sheba Salon Axum",
+      category: "SALON",
+      description:
+        "Royal treatment salon in Axum. Traditional and modern hairstyles, skincare, and bridal services. Inspired by the legendary Queen of Sheba.",
+      phone: "+251-914-500009",
+      email: "queensheba.salon@gmail.com",
+      website: "https://queenshebasalon.example.com",
+      address: "Tsion Mariam Road, near Sabean Hotel",
+      city: "Axum",
+      state: S,
+      zipCode: "7210",
     },
     {
       name: "Lalibela Beauty Center",
       category: "SALON",
       description:
-        "Named after Ethiopia's rock-hewn wonder, we sculpt beauty with precision. Full hair, nail, and makeup services in a luxurious setting.",
-      phone: "+251-911-300008",
-      email: "lalibela.beauty@gmail.com",
-      website: "https://lalibelabeauty.example.com",
-      address: "CMC Road, Diamond Building",
-      city: "Addis Ababa",
+        "Hair, nail, and makeup services in a luxurious Wukro setting. Bridal packages with advance booking. Serving all of eastern Tigray.",
+      phone: "+251-914-500010",
+      email: "lalibela.beauty.wk@gmail.com",
+      website: "https://lalibelabeautywk.example.com",
+      address: "Main Road, near Wukro Hotel",
+      city: "Wukro",
+      state: S,
+      zipCode: "7300",
     },
+    // SPA
     {
-      name: "Adama Style House",
-      category: "SALON",
+      name: "Yeha Retreat Spa",
+      category: "SPA",
       description:
-        "Adama's premier beauty destination for hair styling, manicures, pedicures, and facial treatments. Bridal packages available with advance booking.",
-      phone: "+251-911-300009",
-      email: "adama.style@gmail.com",
-      website: "https://adamastyle.example.com",
-      address: "Franko Area, near Adama Stadium",
-      city: "Adama",
-    },
-    {
-      name: "Queen Makeda Salon Mekelle",
-      category: "SALON",
-      description:
-        "Inspired by the legendary queen, our salon offers royal treatment. Specializing in traditional and modern Ethiopian hairstyles, skincare, and bridal services.",
-      phone: "+251-911-300010",
-      email: "makeda.salon@gmail.com",
-      website: "https://makedasalon.example.com",
-      address: "Adi Haki, near Axum Hotel",
+        "Luxury spa inspired by the ancient Yeha temple. Hot springs therapy, aromatherapy, and signature Ethiopian coffee scrubs in Mekelle.",
+      phone: "+251-914-500011",
+      email: "yeha.spa@gmail.com",
+      website: "https://yehaspa.example.com",
+      address: "Semien Sub-City, near Planet Hotel",
       city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
-
-    // SPA (5)
     {
-      name: "Serenity Wellness Spa",
+      name: "Blue Nile Day Spa Shire",
       category: "SPA",
       description:
-        "A full-service wellness spa dedicated to relaxation and rejuvenation. Massage therapies, facials, and body treatments by certified therapists.",
-      phone: "+251-922-300011",
-      email: "hello@serenityspa.example.com",
-      website: "https://serenityspa.example.com",
-      address: "Kazanchis, Mega Building, Ground Floor",
-      city: "Addis Ababa",
+        "Shire's premier day spa. Hot stone massage, anti-aging facials, and couples packages in a serene Inda Selassie setting.",
+      phone: "+251-914-500012",
+      email: "bluenile.shire@gmail.com",
+      website: "https://bluenileshire.example.com",
+      address: "Main Street, near Shire Hospital",
+      city: "Shire",
+      state: S,
+      zipCode: "7500",
     },
     {
-      name: "Kuriftu Spa & Wellness",
+      name: "Debre Damo Wellness Center",
       category: "SPA",
       description:
-        "Luxury spa experience inspired by Ethiopian natural healing traditions. Hot springs therapy, aromatherapy, and signature Ethiopian coffee scrubs.",
-      phone: "+251-922-300012",
-      email: "kuriftu.spa@gmail.com",
-      website: "https://kuriftuspa.example.com",
-      address: "Old Airport Area, Bole Sub-City",
-      city: "Addis Ababa",
+        "Combining ancient Tigrayan wellness traditions with modern spa techniques. Herbal steam baths, traditional massage, and aromatherapy.",
+      phone: "+251-914-500013",
+      email: "debredamo.wellness@gmail.com",
+      website: "https://debredamowellness.example.com",
+      address: "Near Adigrat Bus Terminal",
+      city: "Adigrat",
+      state: S,
+      zipCode: "7400",
     },
+    // FITNESS
     {
-      name: "Langano Retreat Spa",
-      category: "SPA",
-      description:
-        "Escape to tranquility. Our lakeside spa offers deep tissue massage, steam rooms, and traditional Ethiopian herbal treatments in a peaceful environment.",
-      phone: "+251-922-300013",
-      email: "langano.retreat@gmail.com",
-      website: "https://langanoretreat.example.com",
-      address: "Lake Langano Shore Road",
-      city: "Ziway",
-    },
-    {
-      name: "Blue Lotus Day Spa",
-      category: "SPA",
-      description:
-        "Bahir Dar's premier day spa with views of Lake Tana. Signature treatments include hot stone massage, anti-aging facials, and couples packages.",
-      phone: "+251-922-300014",
-      email: "bluelotus.spa@gmail.com",
-      website: "https://bluelotusspa.example.com",
-      address: "Lake Tana Shore, near Ghion Hotel",
-      city: "Bahir Dar",
-    },
-    {
-      name: "Harar Wellness Center",
-      category: "SPA",
-      description:
-        "Combining ancient Harari wellness traditions with modern spa techniques. Herbal steam baths, traditional massage, and aromatherapy using local ingredients.",
-      phone: "+251-922-300015",
-      email: "harar.wellness@gmail.com",
-      website: "https://hararwellness.example.com",
-      address: "Jugol, near Harar Gate",
-      city: "Harar",
-    },
-
-    // FITNESS (5)
-    {
-      name: "Ethio Fitness Hub",
+      name: "Habesha CrossFit Mekelle",
       category: "FITNESS",
       description:
-        "Modern gym with personal training, group fitness classes, yoga, and CrossFit. State-of-the-art equipment imported from Europe. Open to all fitness levels.",
-      phone: "+251-922-300016",
-      email: "ethio.fitness@gmail.com",
-      website: "https://ethiofitness.example.com",
-      address: "Atlas, near Edna Mall",
-      city: "Addis Ababa",
-    },
-    {
-      name: "Habesha CrossFit",
-      category: "FITNESS",
-      description:
-        "CrossFit box for serious athletes and beginners alike. Certified coaches, Olympic lifting platforms, and a supportive community atmosphere.",
-      phone: "+251-922-300017",
-      email: "habesha.crossfit@gmail.com",
-      website: "https://habeshacrossfit.example.com",
-      address: "Gerji, near Imperial Hotel",
-      city: "Addis Ababa",
-    },
-    {
-      name: "Hawassa Active Life Gym",
-      category: "FITNESS",
-      description:
-        "Full-service gym with cardio zone, weight room, sauna, and swimming pool. Personal training sessions available by appointment.",
-      phone: "+251-922-300018",
-      email: "hawassa.activelife@gmail.com",
-      website: "https://hawassaactivelife.example.com",
-      address: "Piazza, Hawassa Commercial Center",
-      city: "Hawassa",
-    },
-    {
-      name: "Adama Power Gym",
-      category: "FITNESS",
-      description:
-        "Adama's largest gym facility with bodybuilding, cardio, and martial arts training areas. Home of multiple national championship athletes.",
-      phone: "+251-922-300019",
-      email: "adama.powergym@gmail.com",
-      website: "https://adamapowergym.example.com",
-      address: "Dembela Area, near Rift Valley University",
-      city: "Adama",
-    },
-    {
-      name: "Yoga Ethiopia Studio",
-      category: "FITNESS",
-      description:
-        "Dedicated yoga and meditation studio. Classes include Vinyasa, Hatha, Yin, and prenatal yoga. Private sessions and corporate wellness programs available.",
-      phone: "+251-922-300020",
-      email: "yoga.ethiopia@gmail.com",
-      website: "https://yogaethiopia.example.com",
-      address: "Bole Medhanialem, Tsion Building, 4th Floor",
-      city: "Addis Ababa",
-    },
-
-    // DENTAL (4)
-    {
-      name: "Addis Dental Care",
-      category: "DENTAL",
-      description:
-        "Comprehensive dental clinic offering cleanings, fillings, root canals, orthodontics, and cosmetic dentistry. Digital X-rays and modern sterilization.",
-      phone: "+251-911-300021",
-      email: "addis.dental@gmail.com",
-      website: "https://addisdental.example.com",
-      address: "Bole, Wello Sefer, Haya Hulet Building",
-      city: "Addis Ababa",
-    },
-    {
-      name: "Bright Smile Dental Clinic",
-      category: "DENTAL",
-      description:
-        "Family-friendly dental practice with gentle care for children and adults. Teeth whitening, implants, and emergency dental services available.",
-      phone: "+251-911-300022",
-      email: "brightsmile@gmail.com",
-      website: "https://brightsmile.example.com",
-      address: "Mexico Area, near Ghion Hotel",
-      city: "Addis Ababa",
-    },
-    {
-      name: "Gondar Dental Center",
-      category: "DENTAL",
-      description:
-        "Northern Ethiopia's leading dental facility. University-affiliated dentists providing affordable, quality dental care from basic cleaning to surgery.",
-      phone: "+251-911-300023",
-      email: "gondar.dental@gmail.com",
-      website: "https://gondardental.example.com",
-      address: "Piassa, near Gondar University Hospital",
-      city: "Gondar",
-    },
-    {
-      name: "Jimma Family Dentistry",
-      category: "DENTAL",
-      description:
-        "Warm, welcoming dental practice in Jimma. Preventive care, pediatric dentistry, and cosmetic treatments. Most insurance plans accepted.",
-      phone: "+251-911-300024",
-      email: "jimma.dentistry@gmail.com",
-      website: "https://jimmadentistry.example.com",
-      address: "Merkato Area, near Jimma University",
-      city: "Jimma",
-    },
-
-    // MEDICAL (4)
-    {
-      name: "Bethel Medical Clinic",
-      category: "MEDICAL",
-      description:
-        "General practice clinic offering consultations, lab tests, vaccinations, and chronic disease management. Board-certified physicians on staff.",
-      phone: "+251-911-300025",
-      email: "bethel.medical@gmail.com",
-      website: "https://bethelmedical.example.com",
-      address: "Lideta, near Bethel Teaching Hospital",
-      city: "Addis Ababa",
-    },
-    {
-      name: "Hayat Medical Center",
-      category: "MEDICAL",
-      description:
-        "Multi-specialty medical center with internal medicine, pediatrics, OB/GYN, and dermatology. Online appointment booking available 24/7.",
-      phone: "+251-911-300026",
-      email: "hayat.medical@gmail.com",
-      website: "https://hayatmedical.example.com",
-      address: "Bole Sub-City, Kebele 03, near Bole Airport",
-      city: "Addis Ababa",
-    },
-    {
-      name: "Mekelle Health Clinic",
-      category: "MEDICAL",
-      description:
-        "Community health clinic providing primary care, preventive health screenings, maternal health, and minor surgical procedures.",
-      phone: "+251-911-300027",
-      email: "mekelle.health@gmail.com",
-      website: "https://mekellehealth.example.com",
-      address: "Hawelti Area, near Ayder Hospital",
+        "CrossFit box in Mekelle for serious athletes and beginners. Certified coaches, Olympic lifting platforms, and a supportive community.",
+      phone: "+251-914-500014",
+      email: "habesha.crossfit.mk@gmail.com",
+      website: "https://habeshacrossfitmk.example.com",
+      address: "Quiha Road, near Mekelle University",
       city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Adama General Clinic",
+      name: "Yoga Tigray Studio",
+      category: "FITNESS",
+      description:
+        "Dedicated yoga and meditation studio. Vinyasa, Hatha, Yin, and prenatal yoga. Private sessions and corporate wellness programs available.",
+      phone: "+251-914-500015",
+      email: "yoga.tigray@gmail.com",
+      website: "https://yogatigray.example.com",
+      address: "Adi Haki, Tsion Building, 3rd Floor",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
+    },
+    {
+      name: "Adwa Active Life Gym",
+      category: "FITNESS",
+      description:
+        "Full-service gym with cardio, weights, sauna, and group classes. Personal training by appointment. Adwa's fitness destination.",
+      phone: "+251-914-500016",
+      email: "adwa.activelife@gmail.com",
+      website: "https://adwaactivelife.example.com",
+      address: "Near Adwa Heroes Monument",
+      city: "Adwa",
+      state: S,
+      zipCode: "7200",
+    },
+    // DENTAL
+    {
+      name: "Mekelle Dental Care",
+      category: "DENTAL",
+      description:
+        "Comprehensive dental clinic in Hawelti. Cleanings, fillings, root canals, orthodontics, and cosmetic dentistry. Digital X-rays and modern sterilization.",
+      phone: "+251-914-500017",
+      email: "mekelle.dental@gmail.com",
+      website: "https://mekelledental.example.com",
+      address: "Hawelti, near Mekelle Hospital",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
+    },
+    {
+      name: "Bright Smile Dental Axum",
+      category: "DENTAL",
+      description:
+        "Family-friendly dental practice in Axum. Teeth whitening, implants, and emergency dental services available. Gentle care for all ages.",
+      phone: "+251-914-500018",
+      email: "brightsmile.axum@gmail.com",
+      website: "https://brightsmileaxum.example.com",
+      address: "Near Axum Airport Road",
+      city: "Axum",
+      state: S,
+      zipCode: "7210",
+    },
+    {
+      name: "Adigrat Dental Center",
+      category: "DENTAL",
+      description:
+        "Leading dental facility in Adigrat. University-affiliated dentists providing affordable quality care from basic cleaning to oral surgery.",
+      phone: "+251-914-500019",
+      email: "adigrat.dental@gmail.com",
+      website: "https://adigratdental.example.com",
+      address: "Near Adigrat University Health Center",
+      city: "Adigrat",
+      state: S,
+      zipCode: "7400",
+    },
+    {
+      name: "Wukro Family Dentistry",
+      category: "DENTAL",
+      description:
+        "Warm, welcoming dental practice in Wukro. Preventive care, pediatric dentistry, and cosmetic treatments. Most insurance plans accepted.",
+      phone: "+251-914-500020",
+      email: "wukro.dentistry@gmail.com",
+      website: "https://wukrodentistry.example.com",
+      address: "Near Wukro Cherkos Church",
+      city: "Wukro",
+      state: S,
+      zipCode: "7300",
+    },
+    // MEDICAL
+    {
+      name: "Ayder Medical Clinic",
       category: "MEDICAL",
       description:
-        "Trusted general clinic serving the Adama community. Walk-in consultations, routine check-ups, laboratory services, and pharmacy on-site.",
-      phone: "+251-911-300028",
-      email: "adama.clinic@gmail.com",
-      website: "https://adamaclinic.example.com",
-      address: "Kebele 08, near Adama Science and Technology University",
-      city: "Adama",
+        "General practice clinic near Ayder Hospital. Consultations, lab tests, vaccinations, and chronic disease management. Board-certified physicians.",
+      phone: "+251-914-500021",
+      email: "ayder.clinic@gmail.com",
+      website: "https://aydermedical.example.com",
+      address: "Ayder Subcity, near Ayder Referral Hospital",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
-
-    // TUTORING (4)
     {
-      name: "Ethio Tutors Academy",
+      name: "Quiha Health Center",
+      category: "MEDICAL",
+      description:
+        "Multi-specialty center near Quiha. Internal medicine, pediatrics, OB/GYN, dermatology. Online appointment booking available 24/7.",
+      phone: "+251-914-500022",
+      email: "quiha.health@gmail.com",
+      website: "https://quihahealth.example.com",
+      address: "Quiha Town, near Quiha Military Base",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
+    },
+    {
+      name: "Adwa Community Clinic",
+      category: "MEDICAL",
+      description:
+        "Community clinic providing primary care, preventive screenings, maternal health, and minor surgical procedures in historic Adwa.",
+      phone: "+251-914-500023",
+      email: "adwa.clinic@gmail.com",
+      website: "https://adwaclinic.example.com",
+      address: "Main Square, near Adwa Administration",
+      city: "Adwa",
+      state: S,
+      zipCode: "7200",
+    },
+    // TUTORING
+    {
+      name: "Tigray Tutors Academy",
       category: "TUTORING",
       description:
-        "Academic tutoring for grade 9–12 students and university entrance exam preparation. Subjects include Mathematics, Physics, Chemistry, and English.",
-      phone: "+251-911-300029",
-      email: "ethio.tutors@gmail.com",
-      website: "https://ethiotutors.example.com",
-      address: "4 Kilo, near Addis Ababa University",
-      city: "Addis Ababa",
+        "Academic tutoring for grade 9-12 students and university entrance exam preparation. Mathematics, Physics, Chemistry, and English.",
+      phone: "+251-914-500024",
+      email: "tigray.tutors@gmail.com",
+      website: "https://tigraytutors.example.com",
+      address: "Kedamay Weyane, near Mekelle University",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Bright Minds Learning Center",
+      name: "Bright Minds Mekelle",
       category: "TUTORING",
       description:
-        "One-on-one and small group tutoring. Specializing in STEM subjects, SAT/ACT preparation, and coding bootcamps for young learners.",
-      phone: "+251-911-300030",
-      email: "brightminds@gmail.com",
-      website: "https://brightminds.example.com",
-      address: "Arat Kilo, Science Faculty Building",
-      city: "Addis Ababa",
+        "One-on-one and small group tutoring. STEM subjects, SAT/ACT prep, and coding bootcamps for young learners in Tigray's capital.",
+      phone: "+251-914-500025",
+      email: "brightminds.mk@gmail.com",
+      website: "https://brightmindsmk.example.com",
+      address: "Romanat Square, Science Building, 2nd Floor",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Amharic Language School",
+      name: "Tigrinya Language School",
       category: "TUTORING",
       description:
-        "Language instruction for foreigners and diaspora. Beginner to advanced Amharic, Tigrinya, and Oromo language courses. Cultural immersion programs included.",
-      phone: "+251-911-300031",
-      email: "amharic.school@gmail.com",
-      website: "https://amharicschool.example.com",
-      address: "Piassa, Churchill Road, 2nd Floor",
-      city: "Addis Ababa",
+        "Language instruction for foreigners and diaspora. Beginner to advanced Tigrinya, Amharic, and English courses. Cultural immersion included.",
+      phone: "+251-914-500026",
+      email: "tigrinya.school@gmail.com",
+      website: "https://tigrinyaschool.example.com",
+      address: "Adi Haki, near Alliance Francaise",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Hawassa Study Hub",
+      name: "Axum Study Hub",
       category: "TUTORING",
       description:
-        "After-school tutoring and weekend intensive sessions. Serving primary and secondary students with qualified teachers from Hawassa University.",
-      phone: "+251-911-300032",
-      email: "hawassa.studyhub@gmail.com",
-      website: "https://hawassastudyhub.example.com",
-      address: "Tabor Sub-City, near Hawassa University Main Gate",
-      city: "Hawassa",
+        "After-school tutoring and weekend intensive sessions. Qualified teachers from Axum University serving primary and secondary students.",
+      phone: "+251-914-500027",
+      email: "axum.studyhub@gmail.com",
+      website: "https://axumstudyhub.example.com",
+      address: "Near Axum University Main Gate",
+      city: "Axum",
+      state: S,
+      zipCode: "7210",
     },
-
-    // CONSULTING (4)
+    // CONSULTING
     {
-      name: "Addis Business Consulting",
+      name: "Tigray Business Consulting",
       category: "CONSULTING",
       description:
-        "Management consulting for Ethiopian businesses. Strategy, operations, HR, and digital transformation. Serving startups to established enterprises.",
-      phone: "+251-922-300033",
-      email: "addis.consulting@gmail.com",
-      website: "https://addisconsulting.example.com",
-      address: "Bole, Dembel City Center, 7th Floor",
-      city: "Addis Ababa",
+        "Management consulting for Tigrayan businesses. Strategy, operations, HR, and digital transformation. Serving startups to established enterprises.",
+      phone: "+251-914-500028",
+      email: "tigray.consulting@gmail.com",
+      website: "https://tigrayconsulting.example.com",
+      address: "Hawelti, Dedebit Building, 5th Floor",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Ethio Legal Advisors",
+      name: "Mereb Legal Advisors",
       category: "CONSULTING",
       description:
-        "Legal consulting firm specializing in Ethiopian business law, investment licensing, tax advisory, and contract drafting. Bilingual Amharic/English service.",
-      phone: "+251-922-300034",
-      email: "ethio.legal@gmail.com",
-      website: "https://ethiolegal.example.com",
-      address: "Kazanchis, Zemen Bank Building, 5th Floor",
-      city: "Addis Ababa",
+        "Legal consulting specializing in Ethiopian and Tigrayan business law, investment licensing, tax advisory, and contract drafting. Bilingual service.",
+      phone: "+251-914-500029",
+      email: "mereb.legal@gmail.com",
+      website: "https://mereblegal.example.com",
+      address: "Kedamay Weyane, near Tigray Courts",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "TechBridge IT Consulting",
+      name: "TechMekelle IT Consulting",
       category: "CONSULTING",
       description:
-        "IT consulting and software development services. Cloud migration, cybersecurity audits, ERP implementation, and mobile app development for Ethiopian businesses.",
-      phone: "+251-922-300035",
-      email: "techbridge@gmail.com",
-      website: "https://techbridge.example.com",
-      address: "Gerji, ICT Park Building",
-      city: "Addis Ababa",
+        "IT consulting and software development. Cloud migration, cybersecurity, ERP implementation, and mobile app development for Tigrayan businesses.",
+      phone: "+251-914-500030",
+      email: "techmekelle@gmail.com",
+      website: "https://techmekelle.example.com",
+      address: "Ayder Subcity, ICT Center",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Green Growth Consulting",
+      name: "Green Tigray Consulting",
       category: "CONSULTING",
       description:
-        "Environmental and sustainability consulting. EIA studies, green building certification, renewable energy feasibility studies, and carbon offset programs.",
-      phone: "+251-922-300036",
-      email: "greengrowth@gmail.com",
-      website: "https://greengrowth.example.com",
-      address: "CMC, Sunshine Building, 3rd Floor",
-      city: "Addis Ababa",
+        "Environmental and sustainability consulting. EIA studies, green building certification, renewable energy feasibility, and reforestation programs.",
+      phone: "+251-914-500031",
+      email: "greentigray@gmail.com",
+      website: "https://greentigray.example.com",
+      address: "Semien Sub-City, Harmony Building, 2nd Floor",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
-
-    // PHOTOGRAPHY (4)
+    // PHOTOGRAPHY
     {
-      name: "Addis Lens Photography",
+      name: "Mekelle Lens Photography",
       category: "PHOTOGRAPHY",
       description:
         "Professional photography studio for weddings, portraits, corporate events, and product photography. Drone photography available for outdoor events.",
-      phone: "+251-911-300037",
-      email: "addislens@gmail.com",
-      website: "https://addislens.example.com",
-      address: "Bole, Atlas Area, Lens Building",
-      city: "Addis Ababa",
+      phone: "+251-914-500032",
+      email: "mekellelens@gmail.com",
+      website: "https://mekellelens.example.com",
+      address: "Romanat Square, Lens Building",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Meskel Square Studios",
+      name: "Obelisk Studios Axum",
       category: "PHOTOGRAPHY",
       description:
-        "Creative photography and videography. Specializing in Ethiopian cultural celebrations, Meskel, Timket, and wedding ceremonies. Full editing suite in-house.",
-      phone: "+251-911-300038",
-      email: "meskel.studios@gmail.com",
-      website: "https://meskelsquarestudios.example.com",
-      address: "Meskel Square Area, Ras Mekonnen Building",
-      city: "Addis Ababa",
+        "Creative photography and videography in Axum. Specializing in cultural celebrations, Ashenda, Meskel, and wedding ceremonies. Full editing suite.",
+      phone: "+251-914-500033",
+      email: "obelisk.studios@gmail.com",
+      website: "https://obeliskstudios.example.com",
+      address: "Near Obelisk Park, Sabean Road",
+      city: "Axum",
+      state: S,
+      zipCode: "7210",
     },
     {
-      name: "Bahir Dar Photo Studio",
+      name: "Adigrat Photo Studio",
       category: "PHOTOGRAPHY",
       description:
-        "Lakeside photography studio offering portrait sessions, event coverage, and nature photography tours around Lake Tana and Blue Nile Falls.",
-      phone: "+251-911-300039",
-      email: "bahirdar.photo@gmail.com",
-      website: "https://bahirdarphotos.example.com",
-      address: "Near Lake Tana Boat Terminal",
-      city: "Bahir Dar",
+        "Portrait sessions, event coverage, and landscape photography tours around the Gheralta mountains and eastern Tigray.",
+      phone: "+251-914-500034",
+      email: "adigrat.photo@gmail.com",
+      website: "https://adigratphotos.example.com",
+      address: "Near Adigrat Cathedral",
+      city: "Adigrat",
+      state: S,
+      zipCode: "7400",
     },
     {
-      name: "Dire Moments Photography",
+      name: "Adwa Moments Photography",
       category: "PHOTOGRAPHY",
       description:
-        "Capturing life's special moments in eastern Ethiopia. Wedding packages, graduation photos, family portraits, and commercial photography.",
-      phone: "+251-911-300040",
-      email: "diremoments@gmail.com",
-      website: "https://diremoments.example.com",
-      address: "Sabean Area, near Dire Dawa City Hall",
-      city: "Dire Dawa",
+        "Capturing life's special moments in historic Adwa. Wedding packages, graduation photos, family portraits, and commercial photography.",
+      phone: "+251-914-500035",
+      email: "adwamoments@gmail.com",
+      website: "https://adwamoments.example.com",
+      address: "Near Adwa Victory Memorial",
+      city: "Adwa",
+      state: S,
+      zipCode: "7200",
     },
-
-    // AUTOMOTIVE (4)
+    // AUTOMOTIVE
     {
-      name: "Abyssinia Auto Care",
+      name: "Tigray Auto Care",
       category: "AUTOMOTIVE",
       description:
-        "Full-service auto repair and maintenance. Oil changes, brake service, engine diagnostics, and tire alignment. Certified mechanics for all vehicle brands.",
-      phone: "+251-911-300041",
-      email: "abyssinia.auto@gmail.com",
-      website: "https://abyssiniauto.example.com",
-      address: "Kaliti, Automotive Row, near Kality Ring Road",
-      city: "Addis Ababa",
+        "Full-service auto repair and maintenance in Mekelle. Oil changes, brake service, engine diagnostics, and tire alignment for all vehicle brands.",
+      phone: "+251-914-500036",
+      email: "tigray.auto@gmail.com",
+      website: "https://tigrayauto.example.com",
+      address: "Industrial Zone, near Mesfin Industrial",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Merkato Auto Garage",
+      name: "Hawelti Auto Garage",
       category: "AUTOMOTIVE",
       description:
-        "Trusted auto garage in Merkato for over 20 years. Engine overhaul, electrical systems, AC repair, and bodywork. Competitive pricing guaranteed.",
-      phone: "+251-911-300042",
-      email: "merkato.garage@gmail.com",
-      website: "https://merkatogarage.example.com",
-      address: "Merkato, Automotive Section, Block 7",
-      city: "Addis Ababa",
+        "Trusted auto garage in Hawelti for over 15 years. Engine overhaul, electrical systems, AC repair, and bodywork. Competitive pricing.",
+      phone: "+251-914-500037",
+      email: "hawelti.garage@gmail.com",
+      website: "https://haweltigarage.example.com",
+      address: "Hawelti, Automotive Row",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Adama Express Auto Service",
+      name: "Wukro Express Auto Service",
       category: "AUTOMOTIVE",
       description:
-        "Quick and reliable auto service on the Addis-Adama expressway. Express oil change, tire service, and roadside assistance. Open 7 days a week.",
-      phone: "+251-911-300043",
-      email: "adama.autoexpress@gmail.com",
-      website: "https://adamaauto.example.com",
-      address: "Expressway Exit 3, Adama Industrial Zone",
-      city: "Adama",
+        "Quick and reliable auto service on the Mekelle-Wukro road. Express oil change, tire service, and roadside assistance. Open 7 days a week.",
+      phone: "+251-914-500038",
+      email: "wukro.autoexpress@gmail.com",
+      website: "https://wukroauto.example.com",
+      address: "Mekelle-Wukro Highway, KM 45",
+      city: "Wukro",
+      state: S,
+      zipCode: "7300",
     },
     {
-      name: "Hawassa Motor Works",
+      name: "Shire Motor Works",
       category: "AUTOMOTIVE",
       description:
-        "Southern Ethiopia's premier auto workshop. Specializing in Toyota, Suzuki, and Hyundai servicing. Genuine and aftermarket parts available.",
-      phone: "+251-911-300044",
-      email: "hawassa.motorworks@gmail.com",
-      website: "https://hawassamotor.example.com",
-      address: "Industrial Zone, near Hawassa Referral Hospital",
-      city: "Hawassa",
+        "Western Tigray's premier auto workshop. Specializing in Toyota, Isuzu, and Hyundai servicing. Genuine and aftermarket parts available.",
+      phone: "+251-914-500039",
+      email: "shire.motorworks@gmail.com",
+      website: "https://shiremotorworks.example.com",
+      address: "Inda Selassie, near Bus Terminal",
+      city: "Shire",
+      state: S,
+      zipCode: "7500",
     },
-
-    // HOME_SERVICES (4)
+    // HOME_SERVICES
     {
-      name: "Addis Clean Home Services",
+      name: "Mekelle Clean Home Services",
       category: "HOME_SERVICES",
       description:
         "Professional home cleaning, deep cleaning, post-construction cleanup, and regular maid services. Trained, vetted, and insured cleaning staff.",
-      phone: "+251-922-300045",
-      email: "addisclean@gmail.com",
-      website: "https://addisclean.example.com",
-      address: "Bole, Wollo Sefer, Service Center",
-      city: "Addis Ababa",
+      phone: "+251-914-500040",
+      email: "mekelleclean@gmail.com",
+      website: "https://mekelleclean.example.com",
+      address: "Romanat Square, Service Center",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Yemane Plumbing & Electric",
+      name: "Gebriel Plumbing & Electric",
       category: "HOME_SERVICES",
       description:
-        "Licensed plumbing and electrical services. Leak repair, pipe installation, wiring, circuit breaker upgrades, and emergency call-outs available 24/7.",
-      phone: "+251-922-300046",
-      email: "yemane.services@gmail.com",
-      website: "https://yemaneplumbing.example.com",
-      address: "Megenagna, Woreda 08",
-      city: "Addis Ababa",
+        "Licensed plumbing and electrical services. Leak repair, pipe installation, wiring, circuit breaker upgrades, and emergency 24/7 call-outs.",
+      phone: "+251-914-500041",
+      email: "gebriel.services@gmail.com",
+      website: "https://gebrielservices.example.com",
+      address: "Kedamay Weyane, Woreda 03",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Bahir Dar Home Fix",
+      name: "Adwa Home Fix",
       category: "HOME_SERVICES",
       description:
-        "General home repair and maintenance in Bahir Dar. Painting, carpentry, tiling, waterproofing, and furniture assembly. Free estimates on all jobs.",
-      phone: "+251-922-300047",
-      email: "bdhomefix@gmail.com",
-      website: "https://bahirdarhomefix.example.com",
-      address: "Kebele 17, near Bahir Dar Poly Technic",
-      city: "Bahir Dar",
+        "General home repair and maintenance in Adwa. Painting, carpentry, tiling, waterproofing, and furniture assembly. Free estimates on all jobs.",
+      phone: "+251-914-500042",
+      email: "adwahomefix@gmail.com",
+      website: "https://adwahomefix.example.com",
+      address: "Near Adwa Preparatory School",
+      city: "Adwa",
+      state: S,
+      zipCode: "7200",
     },
     {
-      name: "Jimma Garden & Landscape",
+      name: "Maychew Garden & Landscape",
       category: "HOME_SERVICES",
       description:
-        "Garden design, landscaping, lawn care, and tree trimming services in Jimma and surrounding areas. Transform your outdoor spaces with our expert team.",
-      phone: "+251-922-300048",
-      email: "jimma.garden@gmail.com",
-      website: "https://jimmagarden.example.com",
-      address: "Jiren Area, near Jimma Teachers College",
-      city: "Jimma",
+        "Garden design, landscaping, lawn care, and tree trimming services in Maychew and surrounding areas. Transform your outdoor space.",
+      phone: "+251-914-500043",
+      email: "maychew.garden@gmail.com",
+      website: "https://maychewgarden.example.com",
+      address: "Near Maychew Town Administration",
+      city: "Maychew",
+      state: S,
+      zipCode: "7600",
     },
-
-    // PET_SERVICES (3)
+    // PET_SERVICES
     {
-      name: "Addis Pet Care Center",
+      name: "Mekelle Pet Care Center",
       category: "PET_SERVICES",
       description:
-        "Comprehensive pet care including veterinary check-ups, grooming, boarding, and pet sitting. Specialized care for dogs, cats, and exotic pets.",
-      phone: "+251-911-300049",
-      email: "addis.petcare@gmail.com",
-      website: "https://addispetcare.example.com",
-      address: "Old Airport, near Bole Medhanialem Church",
-      city: "Addis Ababa",
+        "Comprehensive pet care: vet check-ups, grooming, boarding, and pet sitting. Specialized care for dogs, cats, and exotic pets in Mekelle.",
+      phone: "+251-914-500044",
+      email: "mekelle.petcare@gmail.com",
+      website: "https://mekellepetcare.example.com",
+      address: "Adi Haki, near Tigray Veterinary Lab",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Furry Friends Pet Grooming",
+      name: "Furry Friends Mekelle",
       category: "PET_SERVICES",
       description:
         "Professional pet grooming salon. Bathing, haircuts, nail trimming, ear cleaning, and flea treatments. We treat your pets like family.",
-      phone: "+251-911-300050",
-      email: "furryfriends@gmail.com",
-      website: "https://furryfriends.example.com",
-      address: "CMC, Michael Area, Pet Plaza",
-      city: "Addis Ababa",
+      phone: "+251-914-500045",
+      email: "furryfriends.mk@gmail.com",
+      website: "https://furryfriendsmk.example.com",
+      address: "Semien Sub-City, near Desta Hotel",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Hawassa Vet & Pet Shop",
+      name: "Axum Vet & Pet Shop",
       category: "PET_SERVICES",
       description:
-        "Veterinary clinic and pet supply shop. Vaccinations, surgery, dental care, and premium pet food. Walk-in and appointment-based services.",
-      phone: "+251-911-300051",
-      email: "hawassa.vet@gmail.com",
-      website: "https://hawassavet.example.com",
-      address: "Main Street, near Hawassa City Park",
-      city: "Hawassa",
+        "Veterinary clinic and pet supply shop in Axum. Vaccinations, surgery, dental care, and premium pet food. Walk-in and appointment-based.",
+      phone: "+251-914-500046",
+      email: "axum.vet@gmail.com",
+      website: "https://axumvet.example.com",
+      address: "Near Axum Market Area",
+      city: "Axum",
+      state: S,
+      zipCode: "7210",
     },
-
-    // OTHER (3)
+    // OTHER
     {
-      name: "Addis Events & Planning",
+      name: "Mekelle Events & Planning",
       category: "OTHER",
       description:
-        "Full-service event planning for weddings, corporate events, birthdays, and cultural celebrations. Venue selection, catering coordination, and decoration.",
-      phone: "+251-922-300052",
-      email: "addis.events@gmail.com",
-      website: "https://addisevents.example.com",
-      address: "Bole, Wollo Sefer, Eliana Building",
-      city: "Addis Ababa",
+        "Full-service event planning for weddings, corporate events, birthdays, and cultural celebrations. Venue selection, catering coordination.",
+      phone: "+251-914-500047",
+      email: "mekelle.events@gmail.com",
+      website: "https://mekelleevents.example.com",
+      address: "Hawelti, near Yordanos Hall",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Habesha Tailoring Studio",
+      name: "Tilet Tailoring Studio",
       category: "OTHER",
       description:
-        "Custom tailoring of traditional Ethiopian clothing — habesha kemis, netela, and modern Ethiopian-inspired fashion. Alterations and bespoke suits also available.",
-      phone: "+251-922-300053",
-      email: "habesha.tailor@gmail.com",
-      website: "https://habeshatailor.example.com",
-      address: "Piassa, near St. George Church",
-      city: "Addis Ababa",
+        "Custom traditional Tigrayan clothing. Tilfi dresses, zuria, and modern Tigrayan-inspired fashion. Alterations and bespoke suits also available.",
+      phone: "+251-914-500048",
+      email: "tilet.tailor@gmail.com",
+      website: "https://tilettailor.example.com",
+      address: "Romanat, near Medhanialem Church",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
     },
     {
-      name: "Sheger Printing Press",
+      name: "Semien Printing Press",
       category: "OTHER",
       description:
-        "Commercial printing services including business cards, brochures, banners, wedding invitations, and large-format printing. Same-day rush orders available.",
-      phone: "+251-922-300054",
-      email: "sheger.print@gmail.com",
-      website: "https://shegerprint.example.com",
-      address: "Mexico Area, Printing District",
-      city: "Addis Ababa",
+        "Commercial printing: business cards, brochures, banners, wedding invitations, and large-format printing. Same-day rush orders available.",
+      phone: "+251-914-500049",
+      email: "semien.print@gmail.com",
+      website: "https://semienprint.example.com",
+      address: "Kedamay Weyane, Printing District",
+      city: "Mekelle",
+      state: S,
+      zipCode: "7100",
+    },
+    // Extra to fill out to 52 regular
+    {
+      name: "Enticho Classic Cuts",
+      category: "BARBERSHOP",
+      description:
+        "Established 2019. Quality barbering in the charming town of Enticho. Walk-ins welcome. Serving northern Tigray with pride.",
+      phone: "+251-914-500050",
+      email: "enticho.cuts@gmail.com",
+      website: "https://entichocuts.example.com",
+      address: "Main Road, near Enticho Market",
+      city: "Enticho",
+      state: S,
+      zipCode: "7700",
+    },
+    {
+      name: "Edaga Hamus Style House",
+      category: "SALON",
+      description:
+        "Edaga Hamus premier beauty destination. Hair styling, manicures, pedicures, facials. Bridal packages with advance booking.",
+      phone: "+251-914-500051",
+      email: "edagahamus.style@gmail.com",
+      website: "https://edagahamusstyle.example.com",
+      address: "Market Area, near Edaga Hamus Bus Station",
+      city: "Edaga Hamus",
+      state: S,
+      zipCode: "7350",
+    },
+    {
+      name: "Hagere Selam Retreat Spa",
+      category: "SPA",
+      description:
+        "Mountain retreat spa with stunning views. Steam rooms, herbal treatments, and traditional Tigrayan healing therapies in peaceful Hagere Selam.",
+      phone: "+251-914-500052",
+      email: "hagereselam.spa@gmail.com",
+      website: "https://hageresalamspa.example.com",
+      address: "Hilltop Road, near Hagere Selam Church",
+      city: "Hagere Selam",
+      state: S,
+      zipCode: "7800",
+      isActive: false,
+    },
+    {
+      name: "Maychew Power Gym",
+      category: "FITNESS",
+      description:
+        "Maychew's largest gym. Bodybuilding, cardio, and group classes. Home of multiple regional championship athletes.",
+      phone: "+251-914-500053",
+      email: "maychew.powergym@gmail.com",
+      website: "https://maychewpowergym.example.com",
+      address: "Near Maychew Stadium",
+      city: "Maychew",
+      state: S,
+      zipCode: "7600",
+    },
+    {
+      name: "Abiy Addi General Clinic",
+      category: "MEDICAL",
+      description:
+        "Trusted general clinic serving the Abiy Addi community. Walk-in consultations, routine check-ups, lab services, and pharmacy on-site.",
+      phone: "+251-914-500054",
+      email: "abiyadddi.clinic@gmail.com",
+      website: "https://abiyadddiclinic.example.com",
+      address: "Near Abiy Addi Administration",
+      city: "Abiy Addi",
+      state: S,
+      zipCode: "7900",
     },
   ];
 
-  // Owner 55 matches 55 businesses — last owner gets last business
-  const businesses: SeededBusiness[] = [];
+  const allOwnerIds = users.allOwners.map((u) => u.id);
+  const results: SeededBusiness[] = [];
 
-  for (let i = 0; i < defs.length; i++) {
-    const def = defs[i];
+  for (let i = 0; i < allDefs.length; i++) {
+    const def = allDefs[i];
     const b = await prisma.business.create({
       data: {
-        ownerId: ownerIds[i],
+        ownerId: allOwnerIds[i],
         name: def.name,
         slug: slugify(def.name) + (i > 0 ? `-${i}` : ""),
         description: def.description,
-        category: def.category,
+        category: def.category as BusinessCategory,
         phone: def.phone,
         email: def.email,
         website: def.website,
         address: def.address,
         city: def.city,
-        state: def.city === "Addis Ababa" ? "Addis Ababa" : def.city,
-        zipCode: def.city === "Addis Ababa" ? "1000" : "2000",
-        isActive: i !== 53, // One business is inactive (edge case)
+        state: def.state,
+        zipCode: def.zipCode,
+        isActive: def.isActive !== undefined ? def.isActive : true,
       },
     });
-    businesses.push({
+    results.push({
       id: b.id,
       name: b.name,
-      category: b.category as BusinessCategory,
+      slug: b.slug,
+      category: b.category,
       ownerId: b.ownerId,
+      isDemo: i < 3,
     });
   }
 
-  console.log(`✅ Created ${businesses.length} businesses.\n`);
-  return businesses;
+  console.log(
+    `✅ Created ${results.length} businesses (3 demo, ${results.length - 3} regular).\n`
+  );
+  return results;
 }

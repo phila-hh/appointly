@@ -1,5 +1,12 @@
 /**
- * @file Seed payments — payment records for bookings with all statuses
+ * @file Seed payments — one payment record per booking.
+ *
+ * Status mapping:
+ *   COMPLETED  → SUCCEEDED
+ *   CONFIRMED  → SUCCEEDED (80%) or PENDING (20%)
+ *   PENDING    → PENDING (60%) or PENDING with ref (40%)
+ *   CANCELLED  → REFUNDED (50%) or FAILED (50%)
+ *   NO_SHOW    → SUCCEEDED (customer paid but didn't show)
  */
 
 import { getPrisma, chapaRef } from "./helpers";
@@ -11,55 +18,41 @@ export async function seedPayments(bookings: SeededBooking[]): Promise<void> {
   console.log("💳 Creating payments...");
 
   let count = 0;
-  let refIndex = 1;
+  let idx = 0;
 
   for (const booking of bookings) {
-    let paymentStatus: PaymentStatus;
-    let txRef: string | null;
+    idx++;
+    let status: PaymentStatus;
+    let txRef: string | null = null;
 
     switch (booking.status) {
       case "COMPLETED":
-        paymentStatus = "SUCCEEDED";
-        txRef = chapaRef(refIndex++);
+        status = "SUCCEEDED";
+        txRef = chapaRef();
         break;
       case "CONFIRMED":
-        // Most confirmed have succeeded payments, some still pending
-        if (refIndex % 5 === 0) {
-          paymentStatus = "PENDING";
-          txRef = null;
-        } else {
-          paymentStatus = "SUCCEEDED";
-          txRef = chapaRef(refIndex++);
-        }
+        status = idx % 5 === 0 ? "PENDING" : "SUCCEEDED";
+        txRef = status === "SUCCEEDED" ? chapaRef() : null;
         break;
       case "PENDING":
-        // Mix of pending and no payment yet
-        if (refIndex % 3 === 0) {
-          paymentStatus = "PENDING";
-          txRef = null;
-        } else {
-          paymentStatus = "PENDING";
-          txRef = chapaRef(refIndex++);
-        }
+        status = "PENDING";
+        txRef = idx % 3 === 0 ? chapaRef() : null; // some initiated but not completed
         break;
       case "CANCELLED":
-        // Mix of refunded and failed
-        if (refIndex % 2 === 0) {
-          paymentStatus = "REFUNDED";
-          txRef = chapaRef(refIndex++);
+        if (idx % 2 === 0) {
+          status = "REFUNDED";
+          txRef = chapaRef();
         } else {
-          paymentStatus = "FAILED";
-          txRef = chapaRef(refIndex++);
+          status = "FAILED";
+          txRef = idx % 4 === 0 ? chapaRef() : null;
         }
         break;
       case "NO_SHOW":
-        // Payment was succeeded but customer didn't show
-        paymentStatus = "SUCCEEDED";
-        txRef = chapaRef(refIndex++);
+        status = "SUCCEEDED"; // they paid, just didn't show
+        txRef = chapaRef();
         break;
       default:
-        paymentStatus = "PENDING";
-        txRef = null;
+        status = "PENDING";
     }
 
     try {
@@ -68,12 +61,12 @@ export async function seedPayments(bookings: SeededBooking[]): Promise<void> {
           bookingId: booking.id,
           chapaTransactionRef: txRef,
           amount: booking.totalPrice,
-          status: paymentStatus,
+          status,
         },
       });
       count++;
     } catch {
-      // Skip if booking already has a payment (unique constraint)
+      // skip (unique constraint)
     }
   }
 

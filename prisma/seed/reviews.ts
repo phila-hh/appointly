@@ -1,111 +1,315 @@
 /**
- * @file Seed reviews — reviews for completed bookings
- * Covers all ratings 1-5 with varied comments
+ * @file Seed reviews with sentiment data.
+ *
+ * ~70% of COMPLETED bookings get reviews.
+ * Demo businesses and demo customers get 100% review coverage.
+ * Ratings distribution: 5★ 40%, 4★ 30%, 3★ 15%, 2★ 10%, 1★ 5%
+ * All reviews include AI-generated sentiment fields.
  */
 
 import { getPrisma } from "./helpers";
 import type { SeededBooking } from "./bookings";
 
-const REVIEW_COMMENTS: { rating: number; comments: string[] }[] = [
+interface ReviewTemplate {
+  rating: number;
+  comment: string;
+  sentimentLabel: "positive" | "neutral" | "negative";
+  sentimentScore: number;
+}
+
+const TEMPLATES: ReviewTemplate[] = [
+  // ── 5-star positive ──────────────────────────────────────────────────────
   {
     rating: 5,
-    comments: [
-      "Absolutely fantastic experience! Will definitely come back.",
-      "Best service in Addis Ababa. Highly recommend to everyone!",
-      "Exceeded all my expectations. The staff was incredibly professional.",
-      "ድንቅ አገልግሎት! በጣም ደስ ብሎኛል። (Wonderful service! Very happy.)",
-      "Five stars isn't enough. Perfect in every way!",
-      "My go-to place. Consistently excellent quality every visit.",
-      "The attention to detail was remarkable. Worth every birr.",
-      "I've tried many places but this is hands down the best.",
-      "Professional, friendly, and efficient. Couldn't ask for more.",
-      "Made my day! The whole team was warm and welcoming.",
-      "Transformative experience. I feel like a new person.",
-      "Unmatched quality in the area. Premium service at fair prices.",
-    ],
+    sentimentLabel: "positive",
+    sentimentScore: 0.98,
+    comment:
+      "Absolutely fantastic experience! The staff was incredibly professional and the results were beyond my expectations. Will definitely be coming back!",
+  },
+  {
+    rating: 5,
+    sentimentLabel: "positive",
+    sentimentScore: 0.97,
+    comment:
+      "Best service in Addis Ababa. Highly recommend to everyone! Worth every birr spent.",
+  },
+  {
+    rating: 5,
+    sentimentLabel: "positive",
+    sentimentScore: 0.99,
+    comment:
+      "ድንቅ አገልግሎት! በጣም ደስ ብሎኛል። The whole team was warm, welcoming, and incredibly skilled.",
+  },
+  {
+    rating: 5,
+    sentimentLabel: "positive",
+    sentimentScore: 0.96,
+    comment:
+      "My go-to place now. Consistently excellent quality every single visit. Five stars isn't enough!",
+  },
+  {
+    rating: 5,
+    sentimentLabel: "positive",
+    sentimentScore: 0.98,
+    comment:
+      "Transformative experience. The attention to detail was remarkable. I feel like a completely new person!",
+  },
+  {
+    rating: 5,
+    sentimentLabel: "positive",
+    sentimentScore: 0.95,
+    comment:
+      "Unmatched quality in the area. Premium service at very fair prices. Made my day completely.",
+  },
+  {
+    rating: 5,
+    sentimentLabel: "positive",
+    sentimentScore: 0.97,
+    comment:
+      "I've tried many places in Addis but this is hands down the absolute best. Never going anywhere else!",
+  },
+  {
+    rating: 5,
+    sentimentLabel: "positive",
+    sentimentScore: 0.96,
+    comment:
+      "Professional, friendly, efficient, and affordable. Couldn't ask for more from any business!",
+  },
+  {
+    rating: 5,
+    sentimentLabel: "positive",
+    sentimentScore: 0.99,
+    comment:
+      "Made my special day even more special. Every person I interacted with was warm and professional.",
+  },
+  {
+    rating: 5,
+    sentimentLabel: "positive",
+    sentimentScore: 0.94,
+    comment:
+      "Such a relaxing and rejuvenating experience. Exactly what I needed after a stressful week at work.",
+  },
+  // ── 4-star positive ──────────────────────────────────────────────────────
+  {
+    rating: 4,
+    sentimentLabel: "positive",
+    sentimentScore: 0.82,
+    comment:
+      "Very good service overall. Minor wait time at the start but the quality made up for it. Will return!",
   },
   {
     rating: 4,
-    comments: [
-      "Very good service overall. Minor wait time but worth it.",
-      "Great experience! Only giving 4 stars because parking was difficult.",
-      "Really enjoyed it. The facility is clean and modern.",
-      "Skilled professionals. Would love slightly longer appointment slots.",
-      "Impressed with the quality. Just wish they were open on Sundays.",
-      "Solid service, good value for money. Will return.",
-      "Almost perfect — just needed a bit more attention at the end.",
-      "Very professional staff. The waiting area could use some upgrades.",
-      "Happy with the results. Booking was easy and convenient.",
-      "Good experience. Coffee while waiting was a nice touch!",
-    ],
+    sentimentLabel: "positive",
+    sentimentScore: 0.8,
+    comment:
+      "Really enjoyed it! Great experience. Only giving 4 stars because parking outside is a little difficult.",
+  },
+  {
+    rating: 4,
+    sentimentLabel: "positive",
+    sentimentScore: 0.85,
+    comment:
+      "Impressed with the quality. The facility is clean and modern. Just wish they were open on Sundays too.",
+  },
+  {
+    rating: 4,
+    sentimentLabel: "positive",
+    sentimentScore: 0.79,
+    comment:
+      "Solid service, good value for money. I will definitely return. Booking online was very easy and fast.",
+  },
+  {
+    rating: 4,
+    sentimentLabel: "positive",
+    sentimentScore: 0.83,
+    comment:
+      "Almost perfect — just needed a little more attention at the very end. Overall very happy customer!",
+  },
+  {
+    rating: 4,
+    sentimentLabel: "positive",
+    sentimentScore: 0.78,
+    comment:
+      "Very professional staff. The waiting area could use some upgrades but service quality is top notch.",
+  },
+  {
+    rating: 4,
+    sentimentLabel: "positive",
+    sentimentScore: 0.84,
+    comment:
+      "Happy with the results! They offered complimentary coffee while I waited which was a very nice touch.",
+  },
+  {
+    rating: 4,
+    sentimentLabel: "positive",
+    sentimentScore: 0.81,
+    comment:
+      "Good experience. Skilled professionals who clearly care about their work. Would recommend to friends.",
+  },
+  {
+    rating: 4,
+    sentimentLabel: "positive",
+    sentimentScore: 0.77,
+    comment:
+      "Skilled professionals. Would love slightly longer appointment slots but overall highly satisfied.",
+  },
+  {
+    rating: 4,
+    sentimentLabel: "positive",
+    sentimentScore: 0.86,
+    comment:
+      "Reliable and consistent quality. This is my third visit and each time it gets a little better!",
+  },
+  // ── 3-star neutral ───────────────────────────────────────────────────────
+  {
+    rating: 3,
+    sentimentLabel: "neutral",
+    sentimentScore: 0.71,
+    comment:
+      "Decent service but nothing extraordinary. Average experience overall. Might give it another try.",
   },
   {
     rating: 3,
-    comments: [
-      "Decent service but nothing extraordinary. Average experience.",
-      "It was okay. Expected a bit more for the price.",
-      "The service was fine but the wait was too long.",
-      "Mixed feelings — the actual service was good but communication could improve.",
-      "Not bad, not great. I might try somewhere else next time.",
-      "Service quality was good but the facility needs renovation.",
-      "Average experience. Staff seemed rushed during my appointment.",
-      "Acceptable quality but I've had better elsewhere for similar price.",
-    ],
+    sentimentLabel: "neutral",
+    sentimentScore: 0.68,
+    comment:
+      "It was okay. Expected a bit more for the price I paid. The actual service was fine but nothing wow.",
+  },
+  {
+    rating: 3,
+    sentimentLabel: "neutral",
+    sentimentScore: 0.65,
+    comment:
+      "The service itself was good but the waiting time was too long. Communication could definitely improve.",
+  },
+  {
+    rating: 3,
+    sentimentLabel: "neutral",
+    sentimentScore: 0.72,
+    comment:
+      "Mixed feelings. The actual work was good but I had trouble getting a confirmation on my booking time.",
+  },
+  {
+    rating: 3,
+    sentimentLabel: "neutral",
+    sentimentScore: 0.69,
+    comment:
+      "Not bad, not great. I might try somewhere else next time unless they improve things a bit.",
+  },
+  {
+    rating: 3,
+    sentimentLabel: "neutral",
+    sentimentScore: 0.73,
+    comment:
+      "Service quality was good but the facility itself needs some renovation and modernization.",
+  },
+  {
+    rating: 3,
+    sentimentLabel: "neutral",
+    sentimentScore: 0.67,
+    comment:
+      "Average experience. Staff seemed a bit rushed during my appointment. Could be better.",
+  },
+  {
+    rating: 3,
+    sentimentLabel: "neutral",
+    sentimentScore: 0.7,
+    comment:
+      "Acceptable quality but I've had better elsewhere for a similar price. Neutral recommendation.",
+  },
+  // ── 2-star negative ──────────────────────────────────────────────────────
+  {
+    rating: 2,
+    sentimentLabel: "negative",
+    sentimentScore: 0.78,
+    comment:
+      "Disappointed with the service. Expected much better quality based on the reviews I read online.",
   },
   {
     rating: 2,
-    comments: [
-      "Disappointed with the service. Expected much better quality.",
-      "Long wait, rushed service. Not worth the price at all.",
-      "The staff seemed uninterested. Barely adequate experience.",
-      "Not satisfied. Communication was poor and result was mediocre.",
-      "Below average. Won't recommend unless they improve significantly.",
-      "Had higher expectations based on reviews. Very disappointing.",
-    ],
+    sentimentLabel: "negative",
+    sentimentScore: 0.82,
+    comment:
+      "Long wait, then a rushed service. Not worth the price at all. Very disappointed with the outcome.",
+  },
+  {
+    rating: 2,
+    sentimentLabel: "negative",
+    sentimentScore: 0.76,
+    comment:
+      "The staff seemed uninterested and barely engaged. Barely adequate experience. Won't be returning.",
+  },
+  {
+    rating: 2,
+    sentimentLabel: "negative",
+    sentimentScore: 0.8,
+    comment:
+      "Not satisfied at all. Communication was poor and the final result was completely mediocre.",
+  },
+  {
+    rating: 2,
+    sentimentLabel: "negative",
+    sentimentScore: 0.85,
+    comment:
+      "Below average in every way. Won't recommend unless they make significant improvements soon.",
+  },
+  // ── 1-star negative ──────────────────────────────────────────────────────
+  {
+    rating: 1,
+    sentimentLabel: "negative",
+    sentimentScore: 0.97,
+    comment:
+      "Terrible experience from start to finish. Completely unprofessional staff. Will never return.",
   },
   {
     rating: 1,
-    comments: [
-      "Terrible experience. Will never return. Complete waste of money.",
-      "Worst service I've ever received. Avoid at all costs.",
-      "Rude staff, poor quality, overpriced. Zero stars if I could.",
-      "Walked out halfway through. Completely unprofessional.",
-    ],
+    sentimentLabel: "negative",
+    sentimentScore: 0.96,
+    comment:
+      "Worst service I have ever received in my life. Complete and total waste of hard-earned money. Avoid!",
+  },
+  {
+    rating: 1,
+    sentimentLabel: "negative",
+    sentimentScore: 0.98,
+    comment:
+      "Rude staff, very poor quality, and completely overpriced for what was delivered. Zero stars if I could.",
+  },
+  {
+    rating: 1,
+    sentimentLabel: "negative",
+    sentimentScore: 0.95,
+    comment:
+      "Walked out halfway through the appointment. Completely unprofessional in every possible way.",
   },
 ];
+
+function pickTemplate(i: number): ReviewTemplate {
+  // Distribution: 5★ 40%, 4★ 30%, 3★ 15%, 2★ 10%, 1★ 5%
+  const r = i % 20;
+  if (r < 8) return TEMPLATES[i % 10]; // 5-star (indices 0-9)
+  if (r < 14) return TEMPLATES[10 + (i % 10)]; // 4-star (indices 10-19)
+  if (r < 17) return TEMPLATES[20 + (i % 8)]; // 3-star (indices 20-27)
+  if (r < 19) return TEMPLATES[28 + (i % 5)]; // 2-star (indices 28-32)
+  return TEMPLATES[33 + (i % 4)]; // 1-star (indices 33-36)
+}
 
 export async function seedReviews(bookings: SeededBooking[]): Promise<void> {
   const prisma = getPrisma();
   console.log("⭐ Creating reviews...");
 
   const completedBookings = bookings.filter((b) => b.status === "COMPLETED");
-
-  // Review about 70% of completed bookings (realistic — not everyone leaves a review)
-  const bookingsToReview = completedBookings.filter((_, i) => i % 10 < 7);
-
   let count = 0;
 
-  // Track which customer-business-booking combos we've reviewed
-  const reviewedBookings = new Set<string>();
+  for (let i = 0; i < completedBookings.length; i++) {
+    const booking = completedBookings[i];
 
-  for (let i = 0; i < bookingsToReview.length; i++) {
-    const booking = bookingsToReview[i];
+    // Demo businesses and demo customers get 100% reviews
+    // Regular get ~70%
+    const shouldReview = booking.isDemo || i % 10 < 7;
+    if (!shouldReview) continue;
 
-    // Skip if already reviewed this booking
-    if (reviewedBookings.has(booking.id)) continue;
-    reviewedBookings.add(booking.id);
-
-    // Distribute ratings: mostly 4-5, some 3, few 1-2
-    let ratingGroup: number;
-    const ratingRoll = i % 20;
-    if (ratingRoll < 8) ratingGroup = 5;
-    else if (ratingRoll < 14) ratingGroup = 4;
-    else if (ratingRoll < 17) ratingGroup = 3;
-    else if (ratingRoll < 19) ratingGroup = 2;
-    else ratingGroup = 1;
-
-    const ratingData = REVIEW_COMMENTS.find((r) => r.rating === ratingGroup)!;
-    const comment = ratingData.comments[i % ratingData.comments.length];
+    const tmpl = pickTemplate(i);
 
     try {
       await prisma.review.create({
@@ -113,13 +317,15 @@ export async function seedReviews(bookings: SeededBooking[]): Promise<void> {
           customerId: booking.customerId,
           businessId: booking.businessId,
           bookingId: booking.id,
-          rating: ratingGroup,
-          comment,
+          rating: tmpl.rating,
+          comment: tmpl.comment,
+          sentimentLabel: tmpl.sentimentLabel,
+          sentimentScore: tmpl.sentimentScore,
         },
       });
       count++;
     } catch {
-      // Skip duplicate reviews (unique constraint on bookingId)
+      // unique constraint — skip
     }
   }
 
