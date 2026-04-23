@@ -21,9 +21,9 @@ import { z } from "zod";
 export const serviceSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(2, { error: "Service name must be at least 2 characters." })
-    .max(100, { error: "Service name must be less than 100 characters." })
-    .trim(),
+    .max(100, { error: "Service name must be less than 100 characters." }),
   description: z
     .string()
     .max(500, { error: "Description must be less than 500 characters." })
