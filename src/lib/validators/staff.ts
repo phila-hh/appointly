@@ -30,6 +30,9 @@ export const staffSchema = z.object({
     .max(100, { error: "Name must be less than 100 characters." })
     .trim(),
   email: z
+    .string()
+    .toLowerCase()
+    .trim()
     .email({ error: "Please enter a valid email address." })
     .optional()
     .or(z.literal("")),

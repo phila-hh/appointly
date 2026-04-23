@@ -52,6 +52,9 @@ export const businessSchema = z.object({
     .optional()
     .or(z.literal("")),
   email: z
+    .string()
+    .toLowerCase()
+    .trim()
     .email({ error: "Please enter a valid email address." })
     .optional()
     .or(z.literal("")),

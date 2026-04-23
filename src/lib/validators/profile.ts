@@ -23,6 +23,9 @@ export const updateProfileSchema = z.object({
     .max(50, { error: "Name must be less than 50 characters." })
     .trim(),
   email: z
+    .string()
+    .toLowerCase()
+    .trim()
     .email({ error: "Please enter a valid email address." })
     .trim()
     .toLowerCase(),
