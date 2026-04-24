@@ -44,6 +44,19 @@ function roundCurrency(value: number): number {
 }
 
 /**
+ * Returns true for Next.js navigation errors (redirect, notFound).
+ * These must always be re-thrown — catching them silently breaks
+ * auth guards and causes misleading error responses in tests.
+ */
+function isNextNavigationError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message.startsWith("NEXT_REDIRECT") ||
+    error.message === "NEXT_NOT_FOUND"
+  );
+}
+
+/**
  * Creates an audit log entry under the FINANCE entity type.
  * Keeps finance audit entries separate from user/business entries.
  */
@@ -175,6 +188,8 @@ export async function generatePayoutsForPeriod(
       success: `${grouped.size} payout batch${grouped.size === 1 ? "" : "es"} generated for ${selectedPeriod}.`,
     };
   } catch (error) {
+    // Re-throw Next.js navigation errors — never swallow redirect/notFound
+    if (isNextNavigationError(error)) throw error;
     console.error("generatePayoutsForPeriod error:", error);
     return { error: "Failed to generate payout batches." };
   }
@@ -229,6 +244,8 @@ export async function setPayoutProcessing(
 
     return { success: "Payout moved to processing." };
   } catch (error) {
+    // Re-throw Next.js navigation errors — never swallow redirect/notFound
+    if (isNextNavigationError(error)) throw error;
     console.error("setPayoutProcessing error:", error);
     return { error: "Failed to update payout status." };
   }
@@ -334,6 +351,8 @@ export async function markPayoutPaid(
 
     return { success: "Payout marked as paid and business owner notified." };
   } catch (error) {
+    // Re-throw Next.js navigation errors — never swallow redirect/notFound
+    if (isNextNavigationError(error)) throw error;
     console.error("markPayoutPaid error:", error);
     return { error: "Failed to mark payout as paid." };
   }
@@ -399,6 +418,8 @@ export async function markPayoutFailed(
         "Payout marked as failed. Commissions returned to pending for next cycle.",
     };
   } catch (error) {
+    // Re-throw Next.js navigation errors — never swallow redirect/notFound
+    if (isNextNavigationError(error)) throw error;
     console.error("markPayoutFailed error:", error);
     return { error: "Failed to mark payout as failed." };
   }
