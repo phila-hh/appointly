@@ -6,7 +6,7 @@
  * We DO mock external services (email, AI, Chapa) to avoid real network calls.
  */
 
-import { vi } from "vitest";
+import { vi, afterEach } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Mock next/cache — prevents revalidatePath errors in server actions
