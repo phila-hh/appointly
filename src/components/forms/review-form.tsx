@@ -14,7 +14,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -118,22 +118,22 @@ export function ReviewForm({
           <FormField
             control={form.control}
             name="rating"
-            render={({}) => (
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>Your Rating *</FormLabel>
                 <FormControl>
-                  <Controller
+                  {/* <Controller
                     name="rating"
                     control={form.control}
-                    render={({ field }) => (
-                      <StarRatingInput
-                        value={field.value}
-                        onChange={field.onChange}
-                        disabled={isLoading}
-                        size="lg"
-                      />
-                    )}
+                    render={({ field }) => ( */}
+                  <StarRatingInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={isLoading}
+                    size="lg"
                   />
+                  {/* )}
+                  /> */}
                 </FormControl>
                 <FormDescription>
                   How would you rate your experience?
