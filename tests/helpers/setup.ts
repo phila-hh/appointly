@@ -8,20 +8,21 @@
 
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
+import { cleanup } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
 // Mock next/navigation — used in many components and server actions
 // ---------------------------------------------------------------------------
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
+  useRouter: vi.fn(() => ({
     push: vi.fn(),
     replace: vi.fn(),
     prefetch: vi.fn(),
     back: vi.fn(),
     refresh: vi.fn(),
-  }),
-  useSearchParams: () => new URLSearchParams(),
-  usePathname: () => "/",
+  })),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+  usePathname: vi.fn(() => "/"),
   redirect: vi.fn(),
   notFound: vi.fn(),
 }));
@@ -51,8 +52,33 @@ vi.spyOn(console, "warn").mockImplementation(() => {});
 vi.spyOn(console, "error").mockImplementation(() => {});
 
 // ---------------------------------------------------------------------------
+// Mock ResizeObserver — required by Radix UI components (not in JSDOM)
+// ---------------------------------------------------------------------------
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+}
+
+Object.defineProperty(globalThis, "ResizeObserver", {
+  writable: true,
+  configurable: true,
+  value: ResizeObserverMock,
+});
+
+Object.defineProperty(window, "ResizeObserver", {
+  writable: true,
+  configurable: true,
+  value: ResizeObserverMock,
+});
+
+// ---------------------------------------------------------------------------
 // Clean up mocks after each test to prevent state leakage
 // ---------------------------------------------------------------------------
 afterEach(() => {
   vi.clearAllMocks();
+  cleanup();
 });
