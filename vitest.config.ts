@@ -86,11 +86,20 @@ export default defineConfig(({ mode }) => {
             environment: "node",
             include: ["tests/integration/**/*.test.{ts,tsx}"],
             setupFiles: ["./tests/integration/helpers/setup.ts"],
+            // Run integration tests sequentially — shared DB, no parallel writes
+            fileParallelism: false,
+            // Force Vite to treat next-auth as CJS, preventing ESM bare-specifier errors
+            server: {
+              deps: {
+                inline: ["next-auth", "next"],
+              },
+            },
+          },
+          resolve: {
             alias: {
               "@": path.resolve(__dirname, "./src"),
             },
-            // Run integration tests sequentially — shared DB, no parallel writes
-            fileParallelism: false,
+            conditions: ["node", "require", "default"],
           },
         },
       ],
