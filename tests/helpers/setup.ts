@@ -79,6 +79,8 @@ Object.defineProperty(window, "ResizeObserver", {
 // Clean up mocks after each test to prevent state leakage
 // ---------------------------------------------------------------------------
 afterEach(() => {
-  vi.clearAllMocks();
+  vi.restoreAllMocks();
+  vi.resetModules();
+  vi.useRealTimers();
   cleanup();
 });

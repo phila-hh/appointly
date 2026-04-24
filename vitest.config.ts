@@ -18,6 +18,9 @@ export default defineConfig({
     // Use jsdom to simulate browser environment for component tests
     environment: "jsdom",
 
+    restoreMocks: true,
+    isolate: true,
+
     // Load test environment variables
     env: {
       NODE_ENV: "test",
