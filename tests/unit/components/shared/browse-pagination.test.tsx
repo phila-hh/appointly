@@ -54,7 +54,9 @@ function setupMocks({
   searchParams = new URLSearchParams(),
 } = {}) {
   mockUsePathname.mockReturnValue(pathname);
-  mockUseSearchParams.mockReturnValue(searchParams as any);
+  mockUseSearchParams.mockReturnValue(
+    searchParams as ReturnType<typeof useSearchParams>
+  );
 }
 
 beforeEach(() => {

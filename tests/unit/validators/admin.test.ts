@@ -199,7 +199,7 @@ describe("platformSettingsSchema", () => {
   });
 
   it("rejects missing payout schedule", () => {
-    const { payoutSchedule, ...rest } = validPayload;
+    const { payoutSchedule: _payoutSchedule, ...rest } = validPayload;
     const result = platformSettingsSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
@@ -212,7 +212,8 @@ describe("platformSettingsSchema", () => {
   });
 
   it("rejects missing commission rate", () => {
-    const { defaultCommissionRate, ...rest } = validPayload;
+    const { defaultCommissionRate: _defaultCommissionRate, ...rest } =
+      validPayload;
     const result = platformSettingsSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });

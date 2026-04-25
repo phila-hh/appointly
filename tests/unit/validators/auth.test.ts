@@ -171,7 +171,7 @@ describe("signUpSchema", () => {
   });
 
   it("rejects missing role", () => {
-    const { role, ...noRole } = validPayload;
+    const { role: _role, ...noRole } = validPayload;
     const result = signUpSchema.safeParse(noRole);
     expect(result.success).toBe(false);
   });

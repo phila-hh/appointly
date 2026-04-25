@@ -42,7 +42,7 @@ describe("createBookingSchema", () => {
   });
 
   it("accepts booking without optional notes", () => {
-    const { notes, ...rest } = validPayload;
+    const { notes: _notes, ...rest } = validPayload;
     const result = createBookingSchema.safeParse(rest);
     expect(result.success).toBe(true);
   });
@@ -56,7 +56,7 @@ describe("createBookingSchema", () => {
   });
 
   it("accepts booking without optional staffId", () => {
-    const { staffId, ...rest } = validPayload;
+    const { staffId: _staffId, ...rest } = validPayload;
     const result = createBookingSchema.safeParse(rest);
     expect(result.success).toBe(true);
   });
@@ -80,7 +80,7 @@ describe("createBookingSchema", () => {
   });
 
   it("rejects missing serviceId", () => {
-    const { serviceId, ...rest } = validPayload;
+    const { serviceId: _serviceId, ...rest } = validPayload;
     const result = createBookingSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
@@ -96,7 +96,7 @@ describe("createBookingSchema", () => {
   });
 
   it("rejects missing businessId", () => {
-    const { businessId, ...rest } = validPayload;
+    const { businessId: _businessId, ...rest } = validPayload;
     const result = createBookingSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
@@ -112,7 +112,7 @@ describe("createBookingSchema", () => {
   });
 
   it("rejects missing date", () => {
-    const { date, ...rest } = validPayload;
+    const { date: _date, ...rest } = validPayload;
     const result = createBookingSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });

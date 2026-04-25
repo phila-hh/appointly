@@ -33,7 +33,7 @@ describe("serviceSchema", () => {
   });
 
   it("accepts service without optional description", () => {
-    const { description, ...rest } = validPayload;
+    const { description: _description, ...rest } = validPayload;
     const result = serviceSchema.safeParse(rest);
     expect(result.success).toBe(true);
   });
@@ -210,19 +210,19 @@ describe("serviceSchema", () => {
   });
 
   it("rejects missing name", () => {
-    const { name, ...rest } = validPayload;
+    const { name: _name, ...rest } = validPayload;
     const result = serviceSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
 
   it("rejects missing price", () => {
-    const { price, ...rest } = validPayload;
+    const { price: _price, ...rest } = validPayload;
     const result = serviceSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
 
   it("rejects missing duration", () => {
-    const { duration, ...rest } = validPayload;
+    const { duration: _duration, ...rest } = validPayload;
     const result = serviceSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });

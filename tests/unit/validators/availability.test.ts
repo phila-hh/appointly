@@ -113,7 +113,7 @@ describe("availabilitySchema", () => {
 
   it("rejects invalid dayOfWeek value", () => {
     const schedule = buildValidSchedule();
-    (schedule[0] as any).dayOfWeek = "FUNDAY";
+    (schedule[0] as unknown as Record<string, unknown>).dayOfWeek = "FUNDAY";
 
     const result = availabilitySchema.safeParse({ schedule });
     expect(result.success).toBe(false);
@@ -219,7 +219,7 @@ describe("availabilitySchema", () => {
 
   it("rejects non-boolean isClosed", () => {
     const schedule = buildValidSchedule();
-    (schedule[0] as any).isClosed = "yes";
+    (schedule[0] as unknown as Record<string, unknown>).isClosed = "yes";
 
     const result = availabilitySchema.safeParse({ schedule });
     expect(result.success).toBe(false);
@@ -227,8 +227,8 @@ describe("availabilitySchema", () => {
 
   it("rejects missing isClosed", () => {
     const schedule = buildValidSchedule();
-    const { isClosed, ...rest } = schedule[0];
-    schedule[0] = rest as any;
+    const { isClosed: _, ...rest } = schedule[0];
+    schedule[0] = rest as (typeof schedule)[0];
 
     const result = availabilitySchema.safeParse({ schedule });
     expect(result.success).toBe(false);

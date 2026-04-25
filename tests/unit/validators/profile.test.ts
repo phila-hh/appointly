@@ -36,7 +36,7 @@ describe("updateProfileSchema", () => {
   });
 
   it("accepts profile without optional phone", () => {
-    const { phone, ...rest } = validPayload;
+    const { phone: _phone, ...rest } = validPayload;
     const result = updateProfileSchema.safeParse(rest);
     expect(result.success).toBe(true);
   });
@@ -116,7 +116,7 @@ describe("updateProfileSchema", () => {
   });
 
   it("rejects missing email", () => {
-    const { email, ...rest } = validPayload;
+    const { email: _email, ...rest } = validPayload;
     const result = updateProfileSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
@@ -147,7 +147,7 @@ describe("updateProfileSchema", () => {
   });
 
   it("rejects missing name", () => {
-    const { name, ...rest } = validPayload;
+    const { name: _name, ...rest } = validPayload;
     const result = updateProfileSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
@@ -182,7 +182,7 @@ describe("changePasswordSchema", () => {
   });
 
   it("rejects missing currentPassword", () => {
-    const { currentPassword, ...rest } = validPayload;
+    const { currentPassword: _currentPassword, ...rest } = validPayload;
     const result = changePasswordSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
@@ -242,7 +242,7 @@ describe("changePasswordSchema", () => {
   });
 
   it("rejects missing confirmPassword", () => {
-    const { confirmPassword, ...rest } = validPayload;
+    const { confirmPassword: _confirmPassword, ...rest } = validPayload;
     const result = changePasswordSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });

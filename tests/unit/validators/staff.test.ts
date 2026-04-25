@@ -181,7 +181,7 @@ describe("staffServiceSchema", () => {
   });
 
   it("rejects missing staffId", () => {
-    const { staffId, ...rest } = validPayload;
+    const { staffId: _, ...rest } = validPayload;
     const result = staffServiceSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
@@ -205,7 +205,7 @@ describe("staffServiceSchema", () => {
   });
 
   it("rejects missing serviceIds", () => {
-    const { serviceIds, ...rest } = validPayload;
+    const { serviceIds: _, ...rest } = validPayload;
     const result = staffServiceSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
@@ -384,7 +384,7 @@ describe("staffHoursSchema", () => {
 
   it("rejects invalid dayOfWeek value", () => {
     const schedule = buildValidSchedule();
-    (schedule[0] as any).dayOfWeek = "HOLIDAY";
+    (schedule[0] as unknown as Record<string, unknown>).dayOfWeek = "HOLIDAY";
 
     const result = staffHoursSchema.safeParse({
       staffId: "staff-1",

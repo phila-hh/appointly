@@ -123,7 +123,7 @@ describe("createReviewSchema", () => {
   });
 
   it("accepts review with bookingId and no comment", () => {
-    const { comment, ...rest } = validPayload;
+    const { comment: _comment, ...rest } = validPayload;
     const result = createReviewSchema.safeParse(rest);
     expect(result.success).toBe(true);
   });
@@ -139,7 +139,7 @@ describe("createReviewSchema", () => {
   });
 
   it("rejects missing bookingId", () => {
-    const { bookingId, ...rest } = validPayload;
+    const { bookingId: _bookingId, ...rest } = validPayload;
     const result = createReviewSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });

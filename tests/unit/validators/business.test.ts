@@ -105,7 +105,7 @@ describe("businessSchema", () => {
   });
 
   it("rejects missing name", () => {
-    const { name, ...rest } = validPayload;
+    const { name: _name, ...rest } = validPayload;
     const result = businessSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
@@ -147,7 +147,7 @@ describe("businessSchema", () => {
   });
 
   it("rejects missing category", () => {
-    const { category, ...rest } = validPayload;
+    const { category: _category, ...rest } = validPayload;
     const result = businessSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });

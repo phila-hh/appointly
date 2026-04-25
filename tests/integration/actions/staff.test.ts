@@ -62,7 +62,7 @@ const validStaffData = {
 };
 
 /** Full 7-day schedule where Mon–Fri is open and Sat–Sun is closed. */
-function makeSchedule(businessId?: string) {
+function makeSchedule() {
   return [
     {
       dayOfWeek: "MONDAY" as const,
