@@ -30,8 +30,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# Environment files
+.env
+.env.local
+.env.production.local
+.env.development.local
+.env.test.local
 
 # vercel
 .vercel
@@ -40,5 +44,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-/app/generated/prisma
-/src/generated/prisma
+# Playwright auth state
+tests/e2e/.auth/
+
+# Playwright reports
+playwright-report/
+test-results/

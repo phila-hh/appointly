@@ -12,6 +12,32 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-test-db.sh:/docker-entrypoint-initdb.d/init-test-db.sh
+    networks:
+      - appointly-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: appointly-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://appointly_user:appointly_password@db:5432/appointly
+    depends_on:
+      - db
+    networks:
+      - appointly-network
 
 volumes:
   postgres_data:
+
+networks:
+  appointly-network:
+    driver: bridge

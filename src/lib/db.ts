@@ -1,21 +1,14 @@
 /**
  * @file Prisma Database Client
- * @Description Singleton instance of database operations
+ * @Description Singleton Prisma Client instance for the application.
  *
- * Uses the singleton pattern to prevent multiple PrismaClient instances
- * during development, Next.js hot-reloads modules on every file change,
- * which would normally create a new database  connection each time.
- * The module ensures only ONE connection exists by storing the client
- * on the global object.
+ * Uses PrismaPg adapter with the DATABASE_URL (pooled via Neon PgBouncer).
+ * The directUrl in schema.prisma handles migrations.
+ *
+ * Production: DATABASE_URL points to Neon pooled endpoint
+ * Development: DATABASE_URL points to local Docker PostgreSql
  *
  * @see https://www.prisma.io/docs/guides/database/troubleshooting-orm/help-articles/nextjs-prisma-client-dev-practices
- *
- * @example
- * ```ts
- * import db from "@/lib/db";
- *
- * const users = await db.user.findMany();
- * ```
  */
 
 import { PrismaClient } from "@/generated/prisma/client";
@@ -30,8 +23,14 @@ import { PrismaPg } from "@prisma/adapter-pg";
  * @returns A configured PrismaClient instance
  */
 const createPrismaClient = () => {
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    throw new Error("DATABASE_URL environment variable is not set.");
+  }
+
   const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
+    connectionString,
   });
 
   return new PrismaClient({
@@ -65,6 +64,6 @@ const db = globalForPrisma.prismaGlobal ?? createPrismaClient();
 export default db;
 
 // Preserve client across hot-reloads in development only.
-if (process.env.NODE_ENV !== "development") {
+if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prismaGlobal = db;
 }
