@@ -1,15 +1,18 @@
 /**
  * @file Business Validation Schemas
- * @description Zod schemas for business profile creation and editing.
+ * @description Zod schemas for business profile creation, editing,
+ * and announcement management.
  *
  * Used by:
  *   - BusinessProfileForm (client-side validation)
  *   - createBusiness / updateBusiness server actions (server-side validation)
+ *   - AnnouncementForm (client-side validation)
+ *   - updateAnnouncement server action (server-side validation)
  */
 
 import { z } from "zod";
 
-/** All valid business category values matching the prisma enum. */
+/** All valid business category values matching the Prisma enum. */
 const BUSINESS_CATEGORY_VALUES = [
   "BARBERSHOP",
   "SALON",
@@ -84,5 +87,47 @@ export const businessSchema = z.object({
     .or(z.literal("")),
 });
 
-/** TypeScript type inferred form the business schema. */
+/** TypeScript type inferred from the business schema. */
 export type BusinessFormValues = z.infer<typeof businessSchema>;
+
+/**
+ * Validation schema for setting or updating a business announcement.
+ *
+ * Rules:
+ *   - announcement: optional text, max 500 characters.
+ *     Empty string is treated as "no announcement" in the server action.
+ *   - announcementExpiresAt: optional ISO date string.
+ *     Null / empty string means the announcement is permanent until
+ *     manually removed by the business owner.
+ *     When provided, must parse to a valid date in the future.
+ *
+ * Business rules enforced in the server action (not here):
+ *   - Only the authenticated business owner may update their announcement
+ *   - Saving with empty announcement clears both text and expiry date
+ */
+export const announcementSchema = z.object({
+  announcement: z
+    .string()
+    .max(500, { error: "Announcement must be less than 500 characters." })
+    .optional()
+    .or(z.literal("")),
+  announcementExpiresAt: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine(
+      (val) => {
+        // Empty / undefined → permanent announcement, always valid
+        if (!val || val === "") return true;
+        // Must parse to a real date
+        const date = new Date(val);
+        if (isNaN(date.getTime())) return false;
+        // Must be in the future
+        return date > new Date();
+      },
+      { error: "Expiry date must be a valid future date." }
+    ),
+});
+
+/** TypeScript type inferred from the announcement schema. */
+export type AnnouncementFormValues = z.infer<typeof announcementSchema>;
