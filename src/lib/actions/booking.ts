@@ -10,15 +10,32 @@
  *   - Price snapshotting at booking time
  *   - Automatic Payment record creation with booking
  *
- * Features:
- *   - createBooking now accepts optional staffId
- *   - If business has staff: validates staff, checks per-staff conflicts,
- *     and runs round-robin assignment for "any available" bookings
- *   - Businesses without staff are completely unaffected (backwards compatible)\
- *   - createBooking sends booking confirmation to customer (fire-and-forget)
- *   - createBooking sends new booking notification to business owner
- *   - updateBookingStatus sends cancellation emails when status → CANCELLED
- *   - updateBookingStatus sends review request when status → COMPLETED
+ * Booking lifecycle guards:
+ *   - COMPLETED / NO_SHOW: appointment end time must have passed
+ *   - CANCELLED by business owner: cancellationReason is required;
+ *     if booking was paid, a full refund is automatically triggered
+ *   - CANCELLED by customer: refund eligibility depends on whether the
+ *     cancellation is within the free window (>24h before appointment)
+ *
+ * Reschedule rules:
+ *   - Only CONFIRMED (paid) bookings may be rescheduled
+ *   - Must be more than 24 hours before the current appointment start
+ *   - Maximum 2 reschedules per booking (rescheduleCount tracks this)
+ *   - New slot must not conflict with existing bookings
+ *   - cancellationDeadline is recalculated for the new appointment date/time
+ *
+ * Email triggers (fire-and-forget):
+ *   - createBooking           → confirmation to customer + notification to business
+ *   - updateBookingStatus     → cancellation emails when CANCELLED
+ *                             → review request when COMPLETED
+ *                             → refund email when CANCELLED + was paid
+ *   - rescheduleBooking       → rescheduled email to both parties
+ *
+ * In-app notification triggers:
+ *   - createBooking           → NEW_BOOKING for business owner
+ *   - updateBookingStatus     → BOOKING_CANCELLED for both parties (if paid)
+ *                             → REVIEW_REQUEST for customer on COMPLETED
+ *   - rescheduleBooking       → BOOKING_RESCHEDULED for both parties
  */
 
 "use server";
@@ -29,15 +46,18 @@ import db from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import {
   createBookingSchema,
+  rescheduleBookingSchema,
   updateBookingStatusSchema,
   VALID_STATUS_TRANSITIONS,
   type CreateBookingValues,
   type UpdateBookingStatusValues,
+  type RescheduleBookingValues,
 } from "@/lib/validators/booking";
 import {
   timeToMinutes,
   rangesOverlap,
   getCancellationDeadline,
+  canCancelForFree,
   selectStaffRoundRobin,
 } from "@/lib/booking-utils";
 import {
@@ -45,7 +65,14 @@ import {
   sendNewBookingNotificationEmail,
   sendBookingCancelledEmails,
   sendReviewRequestEmail,
+  sendBookingRescheduledEmail,
 } from "@/lib/email-service";
+import { createNotification } from "@/lib/actions/notification";
+import { processRefund } from "@/lib/actions/payment";
+
+// =============================================================================
+// Types
+// =============================================================================
 
 /** Result type for booking creation. */
 type BookingActionResult = {
@@ -54,11 +81,15 @@ type BookingActionResult = {
   bookingId?: string;
 };
 
-/** Standard result type for status updates. */
-interface ActionResult {
+/** Standard result type for status updates and reschedules. */
+type ActionResult = {
   success?: string;
   error?: string;
-}
+};
+
+// =============================================================================
+// Create Booking
+// =============================================================================
 
 /**
  * Create a new booking with an associated payment record.
@@ -66,6 +97,7 @@ interface ActionResult {
  * After successful creation, fires email notifications (non-blocking):
  *   - Customer receives booking confirmation with payment link
  *   - Business owner receives new booking notification
+ *   - Business owner receives NEW_BOOKING in-app notification
  *
  * @param values - Booking form data (including optional staffId)
  * @returns Object with `success`, `error`, and optionally `bookingId`
@@ -268,6 +300,16 @@ export async function createBooking(
       }
     }
 
+    // Fetch business owner ID for the in-app notification
+    const business = await db.business.findUnique({
+      where: { id: businessId },
+      select: { ownerId: true, name: true },
+    });
+
+    if (!business) {
+      return { error: "Business not found." };
+    }
+
     // Create booking AND payment atomically
     const booking = await db.$transaction(async (tx) => {
       const newBooking = await tx.booking.create({
@@ -285,6 +327,7 @@ export async function createBooking(
           isCancellable: true,
           cancellationDeadline: getCancellationDeadline(bookingDate, startTime),
           cancellationFee: 0,
+          rescheduleCount: 0,
         },
       });
 
@@ -304,15 +347,20 @@ export async function createBooking(
     revalidatePath("/dashboard/bookings");
 
     // -------------------------------------------------------------------------
-    // Fire-and-forget email notifications
+    // Fire-and-forget: emails + in-app notification for business owner
     // -------------------------------------------------------------------------
-    // These run after the booking is created. If they fail, the booking
-    // is still created successfully.
     Promise.all([
       sendBookingConfirmationEmail(booking.id),
       sendNewBookingNotificationEmail(booking.id),
+      createNotification({
+        userId: business.ownerId,
+        type: "NEW_BOOKING",
+        title: "New Booking Received",
+        message: `${user.name ?? "A customer"} booked an appointment.`,
+        link: `/dashboard/bookings`,
+      }),
     ]).catch((err) => {
-      console.error("Booking email notification error:", err);
+      console.error("Booking creation notification error:", err);
     });
 
     return {
@@ -325,14 +373,30 @@ export async function createBooking(
   }
 }
 
+// =============================================================================
+// Update Booking Status
+// =============================================================================
+
 /**
- * Updates a booking's status.
+ * Updates a booking's status with lifecycle guards and side effects.
+ *
+ * Guards enforced:
+ *   - COMPLETED / NO_SHOW: appointment end time must have passed
+ *   - CANCELLED by business: cancellationReason required; full refund if paid
+ *   - CANCELLED by customer within 24h: no refund (within cancellation window)
+ *   - CANCELLED by customer outside 24h: full refund if paid
  *
  * Email triggers:
- *   - CANCELLED → send cancellation emails to both parties
- *   - COMPLETED → send review request to the customer
+ *   - CANCELLED → cancellation emails to both parties
+ *   - COMPLETED → review request to customer (2s delay for DB commit)
+ *   - CANCELLED + paid → refund confirmation email (via processRefund)
  *
- * @param values - Booking ID and new status
+ * In-app notification triggers:
+ *   - CANCELLED → BOOKING_CANCELLED for both parties (if paid, business gets
+ *                 REFUND_ISSUED; customer gets BOOKING_CANCELLED)
+ *   - COMPLETED → REVIEW_REQUEST for customer
+ *
+ * @param values - Booking ID, new status, and optional cancellation reason
  * @returns Object with `success` or `error` message
  */
 export async function updateBookingStatus(
@@ -349,13 +413,23 @@ export async function updateBookingStatus(
       return { error: "Invalid request." };
     }
 
-    const { bookingId, status: newStatus } = validatedFields.data;
+    const {
+      bookingId,
+      status: newStatus,
+      cancellationReason,
+    } = validatedFields.data;
 
     const booking = await db.booking.findUnique({
       where: { id: bookingId },
       include: {
         business: {
-          select: { ownerId: true, slug: true },
+          select: { ownerId: true, slug: true, name: true },
+        },
+        service: {
+          select: { name: true },
+        },
+        payment: {
+          select: { id: true, status: true, chapaTransactionRef: true },
         },
       },
     });
@@ -371,10 +445,26 @@ export async function updateBookingStatus(
       return { error: "You do not have permission to update this booking." };
     }
 
+    // Customers may only cancel their own bookings
     if (isCustomer && !isOwner && newStatus !== "CANCELLED") {
       return { error: "You can only cancel your bookings." };
     }
 
+    // Business owners cancelling a confirmed booking must provide a reason
+    if (
+      isOwner &&
+      !isCustomer &&
+      newStatus === "CANCELLED" &&
+      booking.status === "CONFIRMED" &&
+      (!cancellationReason || cancellationReason.trim().length < 5)
+    ) {
+      return {
+        error:
+          "Please provide a reason for cancelling a confirmed booking. The customer will be notified.",
+      };
+    }
+
+    // Validate the status transition
     const allowedTransitions = VALID_STATUS_TRANSITIONS[booking.status] ?? [];
     if (!allowedTransitions.includes(newStatus)) {
       return {
@@ -382,30 +472,110 @@ export async function updateBookingStatus(
       };
     }
 
+    // -------------------------------------------------------------------------
+    // Guard: COMPLETED and NO_SHOW require the appointment to have ended
+    // -------------------------------------------------------------------------
+    if (newStatus === "COMPLETED" || newStatus === "NO_SHOW") {
+      const [endHour, endMinute] = booking.endTime.split(":").map(Number);
+      const appointmentEnd = new Date(booking.date);
+      appointmentEnd.setHours(endHour, endMinute, 0, 0);
+
+      if (new Date() < appointmentEnd) {
+        const label = newStatus === "COMPLETED" ? "complete" : "no-show";
+        return {
+          error: `Cannot mark as ${label} before the appointment has ended.`,
+        };
+      }
+    }
+
+    // Update the booking status
     await db.booking.update({
       where: { id: bookingId },
       data: { status: newStatus },
     });
 
     revalidatePath("/bookings");
+    revalidatePath(`/bookings/${bookingId}`);
     revalidatePath("/dashboard/bookings");
 
     // -------------------------------------------------------------------------
-    // Fire-and-forget email triggers based on new status
+    // Side effects — fire-and-forget
     // -------------------------------------------------------------------------
+    const isPaid = booking.payment?.status === "SUCCEEDED";
+    const cancelledBy = isCustomer && !isOwner ? "customer" : "business";
+    const isFreeWindow = canCancelForFree(
+      new Date(booking.date),
+      booking.startTime
+    );
+
     if (newStatus === "CANCELLED") {
-      const cancelledBy = isCustomer ? "customer" : "business";
-      sendBookingCancelledEmails(bookingId, cancelledBy).catch((err) => {
+      // Determine refund eligibility
+      const isEligibleForRefund =
+        isPaid &&
+        (cancelledBy === "business" || // Business always refunds
+          (cancelledBy === "customer" && isFreeWindow)); // Customer refunds only if >24h
+
+      // Fire cancellation emails to both parties
+      sendBookingCancelledEmails(
+        bookingId,
+        cancelledBy,
+        cancellationReason || undefined
+      ).catch((err) => {
         console.error("Cancellation email error:", err);
       });
+
+      // In-app notification for the other party
+      if (cancelledBy === "customer") {
+        // Notify business owner
+        createNotification({
+          userId: booking.business.ownerId,
+          type: "BOOKING_CANCELLED",
+          title: "Booking Cancelled",
+          message: `A customer cancelled their ${booking.service.name} appointment.`,
+          link: `/dashboard/bookings`,
+        }).catch((err) => console.error("Notification error:", err));
+      } else {
+        // Business cancelled — notify customer
+        createNotification({
+          userId: booking.customerId,
+          type: "BOOKING_CANCELLED",
+          title: "Your Booking Was Cancelled",
+          message: `${booking.business.name} cancelled your ${booking.service.name} appointment.${cancellationReason ? ` Reason: ${cancellationReason}` : ""}`,
+          link: `/bookings/${bookingId}`,
+        }).catch((err) => console.error("Notification error:", err));
+      }
+
+      // Trigger refund if eligible
+      if (isEligibleForRefund) {
+        processRefund(bookingId).catch((err) => {
+          console.error("Refund processing error:", err);
+        });
+      } else if (isPaid && cancelledBy === "customer" && !isFreeWindow) {
+        // Within 24h cancellation — notify customer that no refund applies
+        createNotification({
+          userId: booking.customerId,
+          type: "BOOKING_CANCELLED",
+          title: "Booking Cancelled — No Refund",
+          message: `Your ${booking.service.name} was cancelled within the 24-hour window. No refund will be issued.`,
+          link: `/bookings/${bookingId}`,
+        }).catch((err) => console.error("Notification error:", err));
+      }
     }
 
     if (newStatus === "COMPLETED") {
-      // Small delay to ensure DB write is committed
+      // Small delay to ensure DB write is committed before the review page loads
       setTimeout(() => {
         sendReviewRequestEmail(bookingId).catch((err) => {
           console.error("Review request email error:", err);
         });
+
+        createNotification({
+          userId: booking.customerId,
+          type: "REVIEW_REQUEST",
+          title: "How was your appointment?",
+          message: `Share your experience at ${booking.business.name}. Your feedback helps others.`,
+          link: `/bookings/${bookingId}/review`,
+        }).catch((err) => console.error("Notification error:", err));
       }, 2000);
     }
 
@@ -420,36 +590,60 @@ export async function updateBookingStatus(
       success: `Booking has been ${statusLabels[newStatus] ?? "updated"}.`,
     };
   } catch (error) {
-    console.error("Update booking error:", error);
+    console.error("Update booking status error:", error);
     return { error: "Something went wrong. Please try again." };
   }
 }
 
+// =============================================================================
+// Reschedule Booking
+// =============================================================================
+
 /**
- * Reschedules an existing booking to a new date and time.
+ * Reschedules a confirmed booking to a new date and time.
  *
- * @param values - Booking ID, new date, new start/end times
+ * Rules enforced:
+ *   - Booking must be CONFIRMED (paid). PENDING bookings should be
+ *     cancelled and rebooked — rescheduling an unpaid booking makes no sense.
+ *   - Must be more than 24 hours before the current appointment start time.
+ *   - Maximum 2 reschedules per booking (rescheduleCount tracks this).
+ *   - New slot must not conflict with existing bookings for the same
+ *     staff member (or business, for single-provider businesses).
+ *   - cancellationDeadline is recalculated for the new appointment.
+ *
+ * Side effects:
+ *   - In-app notifications sent to both customer and business owner
+ *   - Rescheduled email sent to both parties (fire-and-forget)
+ *
+ * @param values - bookingId, new date, new startTime, new endTime
  * @returns Object with `success` or `error` message
  */
-export async function rescheduleBooking(values: {
-  bookingId: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-}): Promise<ActionResult> {
+export async function rescheduleBooking(
+  values: RescheduleBookingValues
+): Promise<ActionResult> {
   try {
     const user = await getCurrentUser();
-
     if (!user) {
       return { error: "Please sign in." };
     }
 
-    const { bookingId, date, startTime, endTime } = values;
+    // Validate input shape
+    const validatedFields = rescheduleBookingSchema.safeParse(values);
+    if (!validatedFields.success) {
+      return { error: "Invalid reschedule data. Please check your input." };
+    }
+
+    const { bookingId, date, startTime, endTime } = validatedFields.data;
 
     const booking = await db.booking.findUnique({
       where: { id: bookingId },
       include: {
-        service: { select: { duration: true } },
+        business: {
+          select: { ownerId: true, name: true, slug: true },
+        },
+        service: {
+          select: { name: true, duration: true },
+        },
       },
     });
 
@@ -457,15 +651,38 @@ export async function rescheduleBooking(values: {
       return { error: "Booking not found." };
     }
 
+    // Only the customer who made the booking may reschedule
     if (booking.customerId !== user.id) {
       return {
         error: "You do not have permission to reschedule this booking.",
       };
     }
 
-    if (booking.status !== "PENDING" && booking.status !== "CONFIRMED") {
+    // Only CONFIRMED (paid) bookings can be rescheduled
+    if (booking.status !== "CONFIRMED") {
       return {
-        error: "This booking cannot be rescheduled in its current state.",
+        error:
+          "Only confirmed (paid) bookings can be rescheduled. To change an unpaid booking, please cancel it and create a new one.",
+      };
+    }
+
+    // Must be more than 24 hours before the current appointment
+    const isOutsideWindow = canCancelForFree(
+      new Date(booking.date),
+      booking.startTime
+    );
+    if (!isOutsideWindow) {
+      return {
+        error:
+          "Bookings cannot be rescheduled within 24 hours of the appointment. Please contact the business directly.",
+      };
+    }
+
+    // Maximum 2 reschedules per booking
+    if (booking.rescheduleCount >= 2) {
+      return {
+        error:
+          "This booking has already been rescheduled the maximum number of times (2). Please contact the business to make further changes.",
       };
     }
 
@@ -473,13 +690,17 @@ export async function rescheduleBooking(values: {
     const requestedStart = timeToMinutes(startTime);
     const requestedEnd = timeToMinutes(endTime);
 
+    // -------------------------------------------------------------------------
+    // Slot conflict detection
+    // -------------------------------------------------------------------------
     if (booking.staffId) {
+      // Staff-assigned booking: check only that staff member's schedule
       const staffBookings = await db.booking.findMany({
         where: {
           staffId: booking.staffId,
           date: newBookingDate,
           status: { in: ["PENDING", "CONFIRMED"] },
-          id: { not: bookingId },
+          id: { not: bookingId }, // Exclude the booking being rescheduled
         },
         select: { startTime: true, endTime: true },
       });
@@ -496,10 +717,11 @@ export async function rescheduleBooking(values: {
       if (hasConflict) {
         return {
           error:
-            "Your assigned staff member is not available at the selected time.",
+            "Your assigned staff member is not available at the selected time. Please choose a different slot.",
         };
       }
     } else {
+      // Single-provider business: check all business bookings
       const existingBookings = await db.booking.findMany({
         where: {
           businessId: booking.businessId,
@@ -527,6 +749,11 @@ export async function rescheduleBooking(values: {
       }
     }
 
+    // Capture old date/time for the notification and email
+    const oldDate = new Date(booking.date);
+    const oldStartTime = booking.startTime;
+
+    // Update the booking
     await db.booking.update({
       where: { id: bookingId },
       data: {
@@ -537,11 +764,46 @@ export async function rescheduleBooking(values: {
           newBookingDate,
           startTime
         ),
+        rescheduleCount: { increment: 1 },
       },
     });
 
     revalidatePath("/bookings");
     revalidatePath(`/bookings/${bookingId}`);
+    revalidatePath("/dashboard/bookings");
+
+    // -------------------------------------------------------------------------
+    // Fire-and-forget: notifications + emails for both parties
+    // -------------------------------------------------------------------------
+    const newRescheduleCount = booking.rescheduleCount + 1;
+
+    Promise.all([
+      // In-app: customer confirmation
+      createNotification({
+        userId: booking.customerId,
+        type: "BOOKING_RESCHEDULED",
+        title: "Booking Rescheduled",
+        message: `Your ${booking.service.name} appointment has been moved to ${date}.`,
+        link: `/bookings/${bookingId}`,
+      }),
+      // In-app: business owner alert
+      createNotification({
+        userId: booking.business.ownerId,
+        type: "BOOKING_RESCHEDULED",
+        title: "Booking Rescheduled by Customer",
+        message: `A customer rescheduled their ${booking.service.name} appointment to ${date}.`,
+        link: `/dashboard/bookings`,
+      }),
+      // Email: both parties
+      sendBookingRescheduledEmail(
+        bookingId,
+        oldDate,
+        oldStartTime,
+        newRescheduleCount
+      ),
+    ]).catch((err) => {
+      console.error("Reschedule notification error:", err);
+    });
 
     return { success: "Booking rescheduled successfully!" };
   } catch (error) {
