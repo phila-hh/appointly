@@ -131,6 +131,11 @@ export type StaffHours = Prisma.StaffHoursModel
  * - sentimentLabel: "positive" | "neutral" | "negative" (from Hugging Face)
  * - sentimentScore: 0.0 to 1.0 confidence score
  * - Both are nullable — null means analysis was not performed or failed
+ * 
+ * Business reply:
+ * - businessReply: the owner's public response to this review
+ * - businessReplyAt: when the reply was posted (or last edited)
+ * - Both are nullable — null means no reply has been posted yet
  */
 export type Review = Prisma.ReviewModel
 /**
@@ -140,3 +145,15 @@ export type Review = Prisma.ReviewModel
  * favorited by multiple customers (many-to-many relationship).
  */
 export type Favorite = Prisma.FavoriteModel
+/**
+ * Model Notification
+ * In-app notification delivered to a user when a significant event occurs.
+ * 
+ * Type values (not an enum — kept as String for forward compatibility):
+ * Customer:       BOOKING_CONFIRMED | BOOKING_CANCELLED | BOOKING_RESCHEDULED |
+ * PAYMENT_REFUNDED | REVIEW_REPLY | REVIEW_REQUEST
+ * Business owner: NEW_BOOKING | BOOKING_CANCELLED | BOOKING_RESCHEDULED |
+ * REVIEW_RECEIVED | PAYOUT_PROCESSED | OVERDUE_BOOKING
+ * Admin:          NEW_BUSINESS | PAYOUT_PENDING | REFUND_ISSUED
+ */
+export type Notification = Prisma.NotificationModel

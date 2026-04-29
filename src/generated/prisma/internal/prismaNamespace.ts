@@ -401,7 +401,8 @@ export const ModelName = {
   StaffService: 'StaffService',
   StaffHours: 'StaffHours',
   Review: 'Review',
-  Favorite: 'Favorite'
+  Favorite: 'Favorite',
+  Notification: 'Notification'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -417,7 +418,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "platformSettings" | "adminAuditLog" | "account" | "session" | "verificationToken" | "business" | "service" | "businessHours" | "booking" | "payment" | "commission" | "payout" | "staff" | "staffService" | "staffHours" | "review" | "favorite"
+    modelProps: "user" | "platformSettings" | "adminAuditLog" | "account" | "session" | "verificationToken" | "business" | "service" | "businessHours" | "booking" | "payment" | "commission" | "payout" | "staff" | "staffService" | "staffHours" | "review" | "favorite" | "notification"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1753,6 +1754,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    Notification: {
+      payload: Prisma.$NotificationPayload<ExtArgs>
+      fields: Prisma.NotificationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.NotificationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.NotificationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationPayload>
+        }
+        findFirst: {
+          args: Prisma.NotificationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.NotificationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationPayload>
+        }
+        findMany: {
+          args: Prisma.NotificationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationPayload>[]
+        }
+        create: {
+          args: Prisma.NotificationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationPayload>
+        }
+        createMany: {
+          args: Prisma.NotificationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.NotificationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationPayload>[]
+        }
+        delete: {
+          args: Prisma.NotificationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationPayload>
+        }
+        update: {
+          args: Prisma.NotificationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationPayload>
+        }
+        deleteMany: {
+          args: Prisma.NotificationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.NotificationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.NotificationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationPayload>[]
+        }
+        upsert: {
+          args: Prisma.NotificationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NotificationPayload>
+        }
+        aggregate: {
+          args: Prisma.NotificationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateNotification>
+        }
+        groupBy: {
+          args: Prisma.NotificationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.NotificationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.NotificationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.NotificationCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1796,11 +1871,11 @@ export const UserScalarFieldEnum = {
   id: 'id',
   name: 'name',
   email: 'email',
-  emailVerified: 'emailVerified',
   image: 'image',
   password: 'password',
   phone: 'phone',
   role: 'role',
+  emailVerified: 'emailVerified',
   emailPreferences: 'emailPreferences',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -1887,6 +1962,8 @@ export const BusinessScalarFieldEnum = {
   image: 'image',
   coverImage: 'coverImage',
   isActive: 'isActive',
+  announcement: 'announcement',
+  announcementExpiresAt: 'announcementExpiresAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -1934,9 +2011,11 @@ export const BookingScalarFieldEnum = {
   status: 'status',
   notes: 'notes',
   totalPrice: 'totalPrice',
-  isCancellable: 'isCancellable',
   cancellationDeadline: 'cancellationDeadline',
   cancellationFee: 'cancellationFee',
+  isCancellable: 'isCancellable',
+  rescheduleCount: 'rescheduleCount',
+  warningEmailSentAt: 'warningEmailSentAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -1947,9 +2026,11 @@ export type BookingScalarFieldEnum = (typeof BookingScalarFieldEnum)[keyof typeo
 export const PaymentScalarFieldEnum = {
   id: 'id',
   bookingId: 'bookingId',
-  chapaTransactionRef: 'chapaTransactionRef',
   amount: 'amount',
   status: 'status',
+  chapaTransactionRef: 'chapaTransactionRef',
+  refundStatus: 'refundStatus',
+  refundedAt: 'refundedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -2038,6 +2119,8 @@ export const ReviewScalarFieldEnum = {
   comment: 'comment',
   sentimentLabel: 'sentimentLabel',
   sentimentScore: 'sentimentScore',
+  businessReply: 'businessReply',
+  businessReplyAt: 'businessReplyAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -2053,6 +2136,21 @@ export const FavoriteScalarFieldEnum = {
 } as const
 
 export type FavoriteScalarFieldEnum = (typeof FavoriteScalarFieldEnum)[keyof typeof FavoriteScalarFieldEnum]
+
+
+export const NotificationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  type: 'type',
+  title: 'title',
+  message: 'message',
+  link: 'link',
+  isRead: 'isRead',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type NotificationScalarFieldEnum = (typeof NotificationScalarFieldEnum)[keyof typeof NotificationScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -2117,20 +2215,6 @@ export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaMod
 
 
 /**
- * Reference to a field of type 'DateTime'
- */
-export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
-    
-
-
-/**
- * Reference to a field of type 'DateTime[]'
- */
-export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
-    
-
-
-/**
  * Reference to a field of type 'Role'
  */
 export type EnumRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Role'>
@@ -2141,6 +2225,20 @@ export type EnumRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'Role[]'
  */
 export type ListEnumRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Role[]'>
+    
+
+
+/**
+ * Reference to a field of type 'DateTime'
+ */
+export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
+    
+
+
+/**
+ * Reference to a field of type 'DateTime[]'
+ */
+export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
     
 
 
@@ -2403,6 +2501,7 @@ export type GlobalOmitConfig = {
   staffHours?: Prisma.StaffHoursOmit
   review?: Prisma.ReviewOmit
   favorite?: Prisma.FavoriteOmit
+  notification?: Prisma.NotificationOmit
 }
 
 /* Types for Logging */

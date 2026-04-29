@@ -54,7 +54,7 @@ export default async function PaymentPage({ params }: PaymentPageProps) {
 
   // If already paid, redirect to bookings
   if (booking.payment?.status === "SUCCEEDED") {
-    redirect("bookings");
+    redirect(`/bookings/${bookingId}'`);
   }
 
   // If cancelled, redirect to bookings

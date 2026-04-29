@@ -43,6 +43,8 @@ export type BusinessMinAggregateOutputType = {
   image: string | null
   coverImage: string | null
   isActive: boolean | null
+  announcement: string | null
+  announcementExpiresAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -64,6 +66,8 @@ export type BusinessMaxAggregateOutputType = {
   image: string | null
   coverImage: string | null
   isActive: boolean | null
+  announcement: string | null
+  announcementExpiresAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -85,6 +89,8 @@ export type BusinessCountAggregateOutputType = {
   image: number
   coverImage: number
   isActive: number
+  announcement: number
+  announcementExpiresAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -108,6 +114,8 @@ export type BusinessMinAggregateInputType = {
   image?: true
   coverImage?: true
   isActive?: true
+  announcement?: true
+  announcementExpiresAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -129,6 +137,8 @@ export type BusinessMaxAggregateInputType = {
   image?: true
   coverImage?: true
   isActive?: true
+  announcement?: true
+  announcementExpiresAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -150,6 +160,8 @@ export type BusinessCountAggregateInputType = {
   image?: true
   coverImage?: true
   isActive?: true
+  announcement?: true
+  announcementExpiresAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -244,6 +256,8 @@ export type BusinessGroupByOutputType = {
   image: string | null
   coverImage: string | null
   isActive: boolean
+  announcement: string | null
+  announcementExpiresAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: BusinessCountAggregateOutputType | null
@@ -286,16 +300,18 @@ export type BusinessWhereInput = {
   image?: Prisma.StringNullableFilter<"Business"> | string | null
   coverImage?: Prisma.StringNullableFilter<"Business"> | string | null
   isActive?: Prisma.BoolFilter<"Business"> | boolean
+  announcement?: Prisma.StringNullableFilter<"Business"> | string | null
+  announcementExpiresAt?: Prisma.DateTimeNullableFilter<"Business"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Business"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Business"> | Date | string
-  owner?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  services?: Prisma.ServiceListRelationFilter
-  BusinessHours?: Prisma.BusinessHoursListRelationFilter
   bookings?: Prisma.BookingListRelationFilter
-  reviews?: Prisma.ReviewListRelationFilter
-  favorites?: Prisma.FavoriteListRelationFilter
+  BusinessHours?: Prisma.BusinessHoursListRelationFilter
+  owner?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   commissions?: Prisma.CommissionListRelationFilter
+  favorites?: Prisma.FavoriteListRelationFilter
   payouts?: Prisma.PayoutListRelationFilter
+  reviews?: Prisma.ReviewListRelationFilter
+  services?: Prisma.ServiceListRelationFilter
   staff?: Prisma.StaffListRelationFilter
 }
 
@@ -316,16 +332,18 @@ export type BusinessOrderByWithRelationInput = {
   image?: Prisma.SortOrderInput | Prisma.SortOrder
   coverImage?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  announcement?: Prisma.SortOrderInput | Prisma.SortOrder
+  announcementExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
-  owner?: Prisma.UserOrderByWithRelationInput
-  services?: Prisma.ServiceOrderByRelationAggregateInput
-  BusinessHours?: Prisma.BusinessHoursOrderByRelationAggregateInput
   bookings?: Prisma.BookingOrderByRelationAggregateInput
-  reviews?: Prisma.ReviewOrderByRelationAggregateInput
-  favorites?: Prisma.FavoriteOrderByRelationAggregateInput
+  BusinessHours?: Prisma.BusinessHoursOrderByRelationAggregateInput
+  owner?: Prisma.UserOrderByWithRelationInput
   commissions?: Prisma.CommissionOrderByRelationAggregateInput
+  favorites?: Prisma.FavoriteOrderByRelationAggregateInput
   payouts?: Prisma.PayoutOrderByRelationAggregateInput
+  reviews?: Prisma.ReviewOrderByRelationAggregateInput
+  services?: Prisma.ServiceOrderByRelationAggregateInput
   staff?: Prisma.StaffOrderByRelationAggregateInput
 }
 
@@ -349,16 +367,18 @@ export type BusinessWhereUniqueInput = Prisma.AtLeast<{
   image?: Prisma.StringNullableFilter<"Business"> | string | null
   coverImage?: Prisma.StringNullableFilter<"Business"> | string | null
   isActive?: Prisma.BoolFilter<"Business"> | boolean
+  announcement?: Prisma.StringNullableFilter<"Business"> | string | null
+  announcementExpiresAt?: Prisma.DateTimeNullableFilter<"Business"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Business"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Business"> | Date | string
-  owner?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  services?: Prisma.ServiceListRelationFilter
-  BusinessHours?: Prisma.BusinessHoursListRelationFilter
   bookings?: Prisma.BookingListRelationFilter
-  reviews?: Prisma.ReviewListRelationFilter
-  favorites?: Prisma.FavoriteListRelationFilter
+  BusinessHours?: Prisma.BusinessHoursListRelationFilter
+  owner?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   commissions?: Prisma.CommissionListRelationFilter
+  favorites?: Prisma.FavoriteListRelationFilter
   payouts?: Prisma.PayoutListRelationFilter
+  reviews?: Prisma.ReviewListRelationFilter
+  services?: Prisma.ServiceListRelationFilter
   staff?: Prisma.StaffListRelationFilter
 }, "id" | "ownerId" | "slug">
 
@@ -379,6 +399,8 @@ export type BusinessOrderByWithAggregationInput = {
   image?: Prisma.SortOrderInput | Prisma.SortOrder
   coverImage?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  announcement?: Prisma.SortOrderInput | Prisma.SortOrder
+  announcementExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.BusinessCountOrderByAggregateInput
@@ -406,6 +428,8 @@ export type BusinessScalarWhereWithAggregatesInput = {
   image?: Prisma.StringNullableWithAggregatesFilter<"Business"> | string | null
   coverImage?: Prisma.StringNullableWithAggregatesFilter<"Business"> | string | null
   isActive?: Prisma.BoolWithAggregatesFilter<"Business"> | boolean
+  announcement?: Prisma.StringNullableWithAggregatesFilter<"Business"> | string | null
+  announcementExpiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Business"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Business"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Business"> | Date | string
 }
@@ -426,16 +450,18 @@ export type BusinessCreateInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
-  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
+  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
   commissions?: Prisma.CommissionCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffCreateNestedManyWithoutBusinessInput
 }
 
@@ -456,15 +482,17 @@ export type BusinessUncheckedCreateInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   commissions?: Prisma.CommissionUncheckedCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -484,16 +512,18 @@ export type BusinessUpdateInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
-  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
+  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUpdateManyWithoutBusinessNestedInput
 }
 
@@ -514,15 +544,17 @@ export type BusinessUncheckedUpdateInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUncheckedUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -543,6 +575,8 @@ export type BusinessCreateManyInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -563,6 +597,8 @@ export type BusinessUpdateManyMutationInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -584,6 +620,8 @@ export type BusinessUncheckedUpdateManyInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -610,6 +648,8 @@ export type BusinessCountOrderByAggregateInput = {
   image?: Prisma.SortOrder
   coverImage?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  announcement?: Prisma.SortOrder
+  announcementExpiresAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -631,6 +671,8 @@ export type BusinessMaxOrderByAggregateInput = {
   image?: Prisma.SortOrder
   coverImage?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  announcement?: Prisma.SortOrder
+  announcementExpiresAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -652,6 +694,8 @@ export type BusinessMinOrderByAggregateInput = {
   image?: Prisma.SortOrder
   coverImage?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  announcement?: Prisma.SortOrder
+  announcementExpiresAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -829,15 +873,17 @@ export type BusinessCreateWithoutOwnerInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
   commissions?: Prisma.CommissionCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffCreateNestedManyWithoutBusinessInput
 }
 
@@ -857,15 +903,17 @@ export type BusinessUncheckedCreateWithoutOwnerInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   commissions?: Prisma.CommissionUncheckedCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -901,15 +949,17 @@ export type BusinessUpdateWithoutOwnerInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUpdateManyWithoutBusinessNestedInput
 }
 
@@ -929,15 +979,17 @@ export type BusinessUncheckedUpdateWithoutOwnerInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUncheckedUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -957,15 +1009,17 @@ export type BusinessCreateWithoutServicesInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
+  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
   commissions?: Prisma.CommissionCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffCreateNestedManyWithoutBusinessInput
 }
 
@@ -986,14 +1040,16 @@ export type BusinessUncheckedCreateWithoutServicesInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   commissions?: Prisma.CommissionUncheckedCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1029,15 +1085,17 @@ export type BusinessUpdateWithoutServicesInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
+  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1058,14 +1116,16 @@ export type BusinessUncheckedUpdateWithoutServicesInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUncheckedUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1085,15 +1145,17 @@ export type BusinessCreateWithoutBusinessHoursInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
-  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
+  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
   commissions?: Prisma.CommissionCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffCreateNestedManyWithoutBusinessInput
 }
 
@@ -1114,14 +1176,16 @@ export type BusinessUncheckedCreateWithoutBusinessHoursInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
   commissions?: Prisma.CommissionUncheckedCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1157,15 +1221,17 @@ export type BusinessUpdateWithoutBusinessHoursInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
-  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
+  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1186,14 +1252,16 @@ export type BusinessUncheckedUpdateWithoutBusinessHoursInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUncheckedUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1213,15 +1281,17 @@ export type BusinessCreateWithoutBookingsInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
-  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
   BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
+  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
   commissions?: Prisma.CommissionCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffCreateNestedManyWithoutBusinessInput
 }
 
@@ -1242,14 +1312,16 @@ export type BusinessUncheckedCreateWithoutBookingsInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
   BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
   commissions?: Prisma.CommissionUncheckedCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1285,15 +1357,17 @@ export type BusinessUpdateWithoutBookingsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
-  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
   BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
+  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1314,14 +1388,16 @@ export type BusinessUncheckedUpdateWithoutBookingsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
   BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUncheckedUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1341,15 +1417,17 @@ export type BusinessCreateWithoutCommissionsInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
-  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
+  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
   favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffCreateNestedManyWithoutBusinessInput
 }
 
@@ -1370,14 +1448,16 @@ export type BusinessUncheckedCreateWithoutCommissionsInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1413,15 +1493,17 @@ export type BusinessUpdateWithoutCommissionsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
-  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
+  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
   favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1442,14 +1524,16 @@ export type BusinessUncheckedUpdateWithoutCommissionsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1469,15 +1553,17 @@ export type BusinessCreateWithoutPayoutsInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
-  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
+  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
   commissions?: Prisma.CommissionCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffCreateNestedManyWithoutBusinessInput
 }
 
@@ -1498,14 +1584,16 @@ export type BusinessUncheckedCreateWithoutPayoutsInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   commissions?: Prisma.CommissionUncheckedCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1541,15 +1629,17 @@ export type BusinessUpdateWithoutPayoutsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
-  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
+  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1570,14 +1660,16 @@ export type BusinessUncheckedUpdateWithoutPayoutsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUncheckedUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1597,16 +1689,18 @@ export type BusinessCreateWithoutStaffInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
-  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
+  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
   commissions?: Prisma.CommissionCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
 }
 
 export type BusinessUncheckedCreateWithoutStaffInput = {
@@ -1626,15 +1720,17 @@ export type BusinessUncheckedCreateWithoutStaffInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   commissions?: Prisma.CommissionUncheckedCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
 }
 
 export type BusinessCreateOrConnectWithoutStaffInput = {
@@ -1669,16 +1765,18 @@ export type BusinessUpdateWithoutStaffInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
-  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
+  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
 }
 
 export type BusinessUncheckedUpdateWithoutStaffInput = {
@@ -1698,15 +1796,17 @@ export type BusinessUncheckedUpdateWithoutStaffInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUncheckedUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
 export type BusinessCreateWithoutReviewsInput = {
@@ -1725,15 +1825,17 @@ export type BusinessCreateWithoutReviewsInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
-  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
+  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
   commissions?: Prisma.CommissionCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffCreateNestedManyWithoutBusinessInput
 }
 
@@ -1754,14 +1856,16 @@ export type BusinessUncheckedCreateWithoutReviewsInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutBusinessInput
-  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   commissions?: Prisma.CommissionUncheckedCreateNestedManyWithoutBusinessInput
+  favorites?: Prisma.FavoriteUncheckedCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1797,15 +1901,17 @@ export type BusinessUpdateWithoutReviewsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
-  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
+  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1826,14 +1932,16 @@ export type BusinessUncheckedUpdateWithoutReviewsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutBusinessNestedInput
-  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUncheckedUpdateManyWithoutBusinessNestedInput
+  favorites?: Prisma.FavoriteUncheckedUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1853,15 +1961,17 @@ export type BusinessCreateWithoutFavoritesInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
-  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursCreateNestedManyWithoutBusinessInput
+  owner: Prisma.UserCreateNestedOneWithoutBusinessInput
   commissions?: Prisma.CommissionCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffCreateNestedManyWithoutBusinessInput
 }
 
@@ -1882,14 +1992,16 @@ export type BusinessUncheckedCreateWithoutFavoritesInput = {
   image?: string | null
   coverImage?: string | null
   isActive?: boolean
+  announcement?: string | null
+  announcementExpiresAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   bookings?: Prisma.BookingUncheckedCreateNestedManyWithoutBusinessInput
-  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedCreateNestedManyWithoutBusinessInput
   commissions?: Prisma.CommissionUncheckedCreateNestedManyWithoutBusinessInput
   payouts?: Prisma.PayoutUncheckedCreateNestedManyWithoutBusinessInput
+  reviews?: Prisma.ReviewUncheckedCreateNestedManyWithoutBusinessInput
+  services?: Prisma.ServiceUncheckedCreateNestedManyWithoutBusinessInput
   staff?: Prisma.StaffUncheckedCreateNestedManyWithoutBusinessInput
 }
 
@@ -1925,15 +2037,17 @@ export type BusinessUpdateWithoutFavoritesInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
-  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUpdateManyWithoutBusinessNestedInput
+  owner?: Prisma.UserUpdateOneRequiredWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1954,14 +2068,16 @@ export type BusinessUncheckedUpdateWithoutFavoritesInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  announcement?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  announcementExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
-  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   bookings?: Prisma.BookingUncheckedUpdateManyWithoutBusinessNestedInput
-  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
+  BusinessHours?: Prisma.BusinessHoursUncheckedUpdateManyWithoutBusinessNestedInput
   commissions?: Prisma.CommissionUncheckedUpdateManyWithoutBusinessNestedInput
   payouts?: Prisma.PayoutUncheckedUpdateManyWithoutBusinessNestedInput
+  reviews?: Prisma.ReviewUncheckedUpdateManyWithoutBusinessNestedInput
+  services?: Prisma.ServiceUncheckedUpdateManyWithoutBusinessNestedInput
   staff?: Prisma.StaffUncheckedUpdateManyWithoutBusinessNestedInput
 }
 
@@ -1971,24 +2087,24 @@ export type BusinessUncheckedUpdateWithoutFavoritesInput = {
  */
 
 export type BusinessCountOutputType = {
-  services: number
-  BusinessHours: number
   bookings: number
-  reviews: number
-  favorites: number
+  BusinessHours: number
   commissions: number
+  favorites: number
   payouts: number
+  reviews: number
+  services: number
   staff: number
 }
 
 export type BusinessCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  services?: boolean | BusinessCountOutputTypeCountServicesArgs
-  BusinessHours?: boolean | BusinessCountOutputTypeCountBusinessHoursArgs
   bookings?: boolean | BusinessCountOutputTypeCountBookingsArgs
-  reviews?: boolean | BusinessCountOutputTypeCountReviewsArgs
-  favorites?: boolean | BusinessCountOutputTypeCountFavoritesArgs
+  BusinessHours?: boolean | BusinessCountOutputTypeCountBusinessHoursArgs
   commissions?: boolean | BusinessCountOutputTypeCountCommissionsArgs
+  favorites?: boolean | BusinessCountOutputTypeCountFavoritesArgs
   payouts?: boolean | BusinessCountOutputTypeCountPayoutsArgs
+  reviews?: boolean | BusinessCountOutputTypeCountReviewsArgs
+  services?: boolean | BusinessCountOutputTypeCountServicesArgs
   staff?: boolean | BusinessCountOutputTypeCountStaffArgs
 }
 
@@ -2005,8 +2121,8 @@ export type BusinessCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Ext
 /**
  * BusinessCountOutputType without action
  */
-export type BusinessCountOutputTypeCountServicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.ServiceWhereInput
+export type BusinessCountOutputTypeCountBookingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.BookingWhereInput
 }
 
 /**
@@ -2019,15 +2135,8 @@ export type BusinessCountOutputTypeCountBusinessHoursArgs<ExtArgs extends runtim
 /**
  * BusinessCountOutputType without action
  */
-export type BusinessCountOutputTypeCountBookingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.BookingWhereInput
-}
-
-/**
- * BusinessCountOutputType without action
- */
-export type BusinessCountOutputTypeCountReviewsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.ReviewWhereInput
+export type BusinessCountOutputTypeCountCommissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CommissionWhereInput
 }
 
 /**
@@ -2040,15 +2149,22 @@ export type BusinessCountOutputTypeCountFavoritesArgs<ExtArgs extends runtime.Ty
 /**
  * BusinessCountOutputType without action
  */
-export type BusinessCountOutputTypeCountCommissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.CommissionWhereInput
+export type BusinessCountOutputTypeCountPayoutsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PayoutWhereInput
 }
 
 /**
  * BusinessCountOutputType without action
  */
-export type BusinessCountOutputTypeCountPayoutsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.PayoutWhereInput
+export type BusinessCountOutputTypeCountReviewsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ReviewWhereInput
+}
+
+/**
+ * BusinessCountOutputType without action
+ */
+export type BusinessCountOutputTypeCountServicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ServiceWhereInput
 }
 
 /**
@@ -2076,16 +2192,18 @@ export type BusinessSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   image?: boolean
   coverImage?: boolean
   isActive?: boolean
+  announcement?: boolean
+  announcementExpiresAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  owner?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  services?: boolean | Prisma.Business$servicesArgs<ExtArgs>
-  BusinessHours?: boolean | Prisma.Business$BusinessHoursArgs<ExtArgs>
   bookings?: boolean | Prisma.Business$bookingsArgs<ExtArgs>
-  reviews?: boolean | Prisma.Business$reviewsArgs<ExtArgs>
-  favorites?: boolean | Prisma.Business$favoritesArgs<ExtArgs>
+  BusinessHours?: boolean | Prisma.Business$BusinessHoursArgs<ExtArgs>
+  owner?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   commissions?: boolean | Prisma.Business$commissionsArgs<ExtArgs>
+  favorites?: boolean | Prisma.Business$favoritesArgs<ExtArgs>
   payouts?: boolean | Prisma.Business$payoutsArgs<ExtArgs>
+  reviews?: boolean | Prisma.Business$reviewsArgs<ExtArgs>
+  services?: boolean | Prisma.Business$servicesArgs<ExtArgs>
   staff?: boolean | Prisma.Business$staffArgs<ExtArgs>
   _count?: boolean | Prisma.BusinessCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["business"]>
@@ -2107,6 +2225,8 @@ export type BusinessSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   image?: boolean
   coverImage?: boolean
   isActive?: boolean
+  announcement?: boolean
+  announcementExpiresAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   owner?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2129,6 +2249,8 @@ export type BusinessSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   image?: boolean
   coverImage?: boolean
   isActive?: boolean
+  announcement?: boolean
+  announcementExpiresAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   owner?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2151,20 +2273,22 @@ export type BusinessSelectScalar = {
   image?: boolean
   coverImage?: boolean
   isActive?: boolean
+  announcement?: boolean
+  announcementExpiresAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type BusinessOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "ownerId" | "name" | "slug" | "description" | "category" | "phone" | "email" | "website" | "address" | "city" | "state" | "zipCode" | "image" | "coverImage" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["business"]>
+export type BusinessOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "ownerId" | "name" | "slug" | "description" | "category" | "phone" | "email" | "website" | "address" | "city" | "state" | "zipCode" | "image" | "coverImage" | "isActive" | "announcement" | "announcementExpiresAt" | "createdAt" | "updatedAt", ExtArgs["result"]["business"]>
 export type BusinessInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  owner?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  services?: boolean | Prisma.Business$servicesArgs<ExtArgs>
-  BusinessHours?: boolean | Prisma.Business$BusinessHoursArgs<ExtArgs>
   bookings?: boolean | Prisma.Business$bookingsArgs<ExtArgs>
-  reviews?: boolean | Prisma.Business$reviewsArgs<ExtArgs>
-  favorites?: boolean | Prisma.Business$favoritesArgs<ExtArgs>
+  BusinessHours?: boolean | Prisma.Business$BusinessHoursArgs<ExtArgs>
+  owner?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   commissions?: boolean | Prisma.Business$commissionsArgs<ExtArgs>
+  favorites?: boolean | Prisma.Business$favoritesArgs<ExtArgs>
   payouts?: boolean | Prisma.Business$payoutsArgs<ExtArgs>
+  reviews?: boolean | Prisma.Business$reviewsArgs<ExtArgs>
+  services?: boolean | Prisma.Business$servicesArgs<ExtArgs>
   staff?: boolean | Prisma.Business$staffArgs<ExtArgs>
   _count?: boolean | Prisma.BusinessCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -2178,38 +2302,14 @@ export type BusinessIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
 export type $BusinessPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Business"
   objects: {
-    owner: Prisma.$UserPayload<ExtArgs>
-    /**
-     * All services offered by this business
-     */
-    services: Prisma.$ServicePayload<ExtArgs>[]
-    /**
-     * Weekly operating schedule
-     */
-    BusinessHours: Prisma.$BusinessHoursPayload<ExtArgs>[]
-    /**
-     * All appointments at this business
-     */
     bookings: Prisma.$BookingPayload<ExtArgs>[]
-    /**
-     * Customer reviews for this business
-     */
-    reviews: Prisma.$ReviewPayload<ExtArgs>[]
-    /**
-     * All customer's that favorited this business
-     */
-    favorites: Prisma.$FavoritePayload<ExtArgs>[]
-    /**
-     * Commissions generated from paid bookings
-     */
+    BusinessHours: Prisma.$BusinessHoursPayload<ExtArgs>[]
+    owner: Prisma.$UserPayload<ExtArgs>
     commissions: Prisma.$CommissionPayload<ExtArgs>[]
-    /**
-     * Payout batches for this business
-     */
+    favorites: Prisma.$FavoritePayload<ExtArgs>[]
     payouts: Prisma.$PayoutPayload<ExtArgs>[]
-    /**
-     * Staff members who work at this business
-     */
+    reviews: Prisma.$ReviewPayload<ExtArgs>[]
+    services: Prisma.$ServicePayload<ExtArgs>[]
     staff: Prisma.$StaffPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -2229,6 +2329,11 @@ export type $BusinessPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     image: string | null
     coverImage: string | null
     isActive: boolean
+    /**
+     * Short public announcement shown as a banner on a business page
+     */
+    announcement: string | null
+    announcementExpiresAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["business"]>
@@ -2625,14 +2730,14 @@ readonly fields: BusinessFieldRefs;
  */
 export interface Prisma__BusinessClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  owner<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  services<T extends Prisma.Business$servicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$servicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ServicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  BusinessHours<T extends Prisma.Business$BusinessHoursArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$BusinessHoursArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BusinessHoursPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   bookings<T extends Prisma.Business$bookingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$bookingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BookingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  reviews<T extends Prisma.Business$reviewsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$reviewsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  favorites<T extends Prisma.Business$favoritesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$favoritesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FavoritePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  BusinessHours<T extends Prisma.Business$BusinessHoursArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$BusinessHoursArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BusinessHoursPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  owner<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   commissions<T extends Prisma.Business$commissionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$commissionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CommissionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  favorites<T extends Prisma.Business$favoritesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$favoritesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FavoritePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   payouts<T extends Prisma.Business$payoutsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$payoutsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PayoutPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  reviews<T extends Prisma.Business$reviewsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$reviewsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  services<T extends Prisma.Business$servicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$servicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ServicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   staff<T extends Prisma.Business$staffArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Business$staffArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StaffPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -2679,6 +2784,8 @@ export interface BusinessFieldRefs {
   readonly image: Prisma.FieldRef<"Business", 'String'>
   readonly coverImage: Prisma.FieldRef<"Business", 'String'>
   readonly isActive: Prisma.FieldRef<"Business", 'Boolean'>
+  readonly announcement: Prisma.FieldRef<"Business", 'String'>
+  readonly announcementExpiresAt: Prisma.FieldRef<"Business", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Business", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Business", 'DateTime'>
 }
@@ -3082,27 +3189,27 @@ export type BusinessDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
 }
 
 /**
- * Business.services
+ * Business.bookings
  */
-export type Business$servicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Business$bookingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Service
+   * Select specific fields to fetch from the Booking
    */
-  select?: Prisma.ServiceSelect<ExtArgs> | null
+  select?: Prisma.BookingSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Service
+   * Omit specific fields from the Booking
    */
-  omit?: Prisma.ServiceOmit<ExtArgs> | null
+  omit?: Prisma.BookingOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.ServiceInclude<ExtArgs> | null
-  where?: Prisma.ServiceWhereInput
-  orderBy?: Prisma.ServiceOrderByWithRelationInput | Prisma.ServiceOrderByWithRelationInput[]
-  cursor?: Prisma.ServiceWhereUniqueInput
+  include?: Prisma.BookingInclude<ExtArgs> | null
+  where?: Prisma.BookingWhereInput
+  orderBy?: Prisma.BookingOrderByWithRelationInput | Prisma.BookingOrderByWithRelationInput[]
+  cursor?: Prisma.BookingWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.ServiceScalarFieldEnum | Prisma.ServiceScalarFieldEnum[]
+  distinct?: Prisma.BookingScalarFieldEnum | Prisma.BookingScalarFieldEnum[]
 }
 
 /**
@@ -3130,51 +3237,27 @@ export type Business$BusinessHoursArgs<ExtArgs extends runtime.Types.Extensions.
 }
 
 /**
- * Business.bookings
+ * Business.commissions
  */
-export type Business$bookingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Business$commissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Booking
+   * Select specific fields to fetch from the Commission
    */
-  select?: Prisma.BookingSelect<ExtArgs> | null
+  select?: Prisma.CommissionSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Booking
+   * Omit specific fields from the Commission
    */
-  omit?: Prisma.BookingOmit<ExtArgs> | null
+  omit?: Prisma.CommissionOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.BookingInclude<ExtArgs> | null
-  where?: Prisma.BookingWhereInput
-  orderBy?: Prisma.BookingOrderByWithRelationInput | Prisma.BookingOrderByWithRelationInput[]
-  cursor?: Prisma.BookingWhereUniqueInput
+  include?: Prisma.CommissionInclude<ExtArgs> | null
+  where?: Prisma.CommissionWhereInput
+  orderBy?: Prisma.CommissionOrderByWithRelationInput | Prisma.CommissionOrderByWithRelationInput[]
+  cursor?: Prisma.CommissionWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.BookingScalarFieldEnum | Prisma.BookingScalarFieldEnum[]
-}
-
-/**
- * Business.reviews
- */
-export type Business$reviewsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Review
-   */
-  select?: Prisma.ReviewSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the Review
-   */
-  omit?: Prisma.ReviewOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.ReviewInclude<ExtArgs> | null
-  where?: Prisma.ReviewWhereInput
-  orderBy?: Prisma.ReviewOrderByWithRelationInput | Prisma.ReviewOrderByWithRelationInput[]
-  cursor?: Prisma.ReviewWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.ReviewScalarFieldEnum | Prisma.ReviewScalarFieldEnum[]
+  distinct?: Prisma.CommissionScalarFieldEnum | Prisma.CommissionScalarFieldEnum[]
 }
 
 /**
@@ -3202,30 +3285,6 @@ export type Business$favoritesArgs<ExtArgs extends runtime.Types.Extensions.Inte
 }
 
 /**
- * Business.commissions
- */
-export type Business$commissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Commission
-   */
-  select?: Prisma.CommissionSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the Commission
-   */
-  omit?: Prisma.CommissionOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.CommissionInclude<ExtArgs> | null
-  where?: Prisma.CommissionWhereInput
-  orderBy?: Prisma.CommissionOrderByWithRelationInput | Prisma.CommissionOrderByWithRelationInput[]
-  cursor?: Prisma.CommissionWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.CommissionScalarFieldEnum | Prisma.CommissionScalarFieldEnum[]
-}
-
-/**
  * Business.payouts
  */
 export type Business$payoutsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3247,6 +3306,54 @@ export type Business$payoutsArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   distinct?: Prisma.PayoutScalarFieldEnum | Prisma.PayoutScalarFieldEnum[]
+}
+
+/**
+ * Business.reviews
+ */
+export type Business$reviewsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Review
+   */
+  select?: Prisma.ReviewSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Review
+   */
+  omit?: Prisma.ReviewOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ReviewInclude<ExtArgs> | null
+  where?: Prisma.ReviewWhereInput
+  orderBy?: Prisma.ReviewOrderByWithRelationInput | Prisma.ReviewOrderByWithRelationInput[]
+  cursor?: Prisma.ReviewWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ReviewScalarFieldEnum | Prisma.ReviewScalarFieldEnum[]
+}
+
+/**
+ * Business.services
+ */
+export type Business$servicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Service
+   */
+  select?: Prisma.ServiceSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Service
+   */
+  omit?: Prisma.ServiceOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ServiceInclude<ExtArgs> | null
+  where?: Prisma.ServiceWhereInput
+  orderBy?: Prisma.ServiceOrderByWithRelationInput | Prisma.ServiceOrderByWithRelationInput[]
+  cursor?: Prisma.ServiceWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ServiceScalarFieldEnum | Prisma.ServiceScalarFieldEnum[]
 }
 
 /**

@@ -262,8 +262,8 @@ export type ServiceWhereInput = {
   isActive?: Prisma.BoolFilter<"Service"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Service"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Service"> | Date | string
-  business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   bookings?: Prisma.BookingListRelationFilter
+  business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   staffServices?: Prisma.StaffServiceListRelationFilter
 }
 
@@ -278,8 +278,8 @@ export type ServiceOrderByWithRelationInput = {
   isActive?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
-  business?: Prisma.BusinessOrderByWithRelationInput
   bookings?: Prisma.BookingOrderByRelationAggregateInput
+  business?: Prisma.BusinessOrderByWithRelationInput
   staffServices?: Prisma.StaffServiceOrderByRelationAggregateInput
 }
 
@@ -297,8 +297,8 @@ export type ServiceWhereUniqueInput = Prisma.AtLeast<{
   isActive?: Prisma.BoolFilter<"Service"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Service"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Service"> | Date | string
-  business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   bookings?: Prisma.BookingListRelationFilter
+  business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   staffServices?: Prisma.StaffServiceListRelationFilter
 }, "id">
 
@@ -346,8 +346,8 @@ export type ServiceCreateInput = {
   isActive?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
-  business: Prisma.BusinessCreateNestedOneWithoutServicesInput
   bookings?: Prisma.BookingCreateNestedManyWithoutServiceInput
+  business: Prisma.BusinessCreateNestedOneWithoutServicesInput
   staffServices?: Prisma.StaffServiceCreateNestedManyWithoutServiceInput
 }
 
@@ -376,8 +376,8 @@ export type ServiceUpdateInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  business?: Prisma.BusinessUpdateOneRequiredWithoutServicesNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutServiceNestedInput
+  business?: Prisma.BusinessUpdateOneRequiredWithoutServicesNestedInput
   staffServices?: Prisma.StaffServiceUpdateManyWithoutServiceNestedInput
 }
 
@@ -736,8 +736,8 @@ export type ServiceCreateWithoutStaffServicesInput = {
   isActive?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
-  business: Prisma.BusinessCreateNestedOneWithoutServicesInput
   bookings?: Prisma.BookingCreateNestedManyWithoutServiceInput
+  business: Prisma.BusinessCreateNestedOneWithoutServicesInput
 }
 
 export type ServiceUncheckedCreateWithoutStaffServicesInput = {
@@ -780,8 +780,8 @@ export type ServiceUpdateWithoutStaffServicesInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  business?: Prisma.BusinessUpdateOneRequiredWithoutServicesNestedInput
   bookings?: Prisma.BookingUpdateManyWithoutServiceNestedInput
+  business?: Prisma.BusinessUpdateOneRequiredWithoutServicesNestedInput
 }
 
 export type ServiceUncheckedUpdateWithoutStaffServicesInput = {
@@ -901,8 +901,8 @@ export type ServiceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   isActive?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   bookings?: boolean | Prisma.Service$bookingsArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   staffServices?: boolean | Prisma.Service$staffServicesArgs<ExtArgs>
   _count?: boolean | Prisma.ServiceCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["service"]>
@@ -950,8 +950,8 @@ export type ServiceSelectScalar = {
 
 export type ServiceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "businessId" | "name" | "description" | "price" | "duration" | "image" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["service"]>
 export type ServiceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   bookings?: boolean | Prisma.Service$bookingsArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   staffServices?: boolean | Prisma.Service$staffServicesArgs<ExtArgs>
   _count?: boolean | Prisma.ServiceCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -965,8 +965,8 @@ export type ServiceIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
 export type $ServicePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Service"
   objects: {
-    business: Prisma.$BusinessPayload<ExtArgs>
     bookings: Prisma.$BookingPayload<ExtArgs>[]
+    business: Prisma.$BusinessPayload<ExtArgs>
     staffServices: Prisma.$StaffServicePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1374,8 +1374,8 @@ readonly fields: ServiceFieldRefs;
  */
 export interface Prisma__ServiceClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  business<T extends Prisma.BusinessDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BusinessDefaultArgs<ExtArgs>>): Prisma.Prisma__BusinessClient<runtime.Types.Result.GetResult<Prisma.$BusinessPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   bookings<T extends Prisma.Service$bookingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Service$bookingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BookingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  business<T extends Prisma.BusinessDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BusinessDefaultArgs<ExtArgs>>): Prisma.Prisma__BusinessClient<runtime.Types.Result.GetResult<Prisma.$BusinessPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   staffServices<T extends Prisma.Service$staffServicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Service$staffServicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StaffServicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.

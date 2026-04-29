@@ -168,16 +168,16 @@ export type StaffServiceWhereInput = {
   id?: Prisma.StringFilter<"StaffService"> | string
   staffId?: Prisma.StringFilter<"StaffService"> | string
   serviceId?: Prisma.StringFilter<"StaffService"> | string
-  staff?: Prisma.XOR<Prisma.StaffScalarRelationFilter, Prisma.StaffWhereInput>
   service?: Prisma.XOR<Prisma.ServiceScalarRelationFilter, Prisma.ServiceWhereInput>
+  staff?: Prisma.XOR<Prisma.StaffScalarRelationFilter, Prisma.StaffWhereInput>
 }
 
 export type StaffServiceOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   staffId?: Prisma.SortOrder
   serviceId?: Prisma.SortOrder
-  staff?: Prisma.StaffOrderByWithRelationInput
   service?: Prisma.ServiceOrderByWithRelationInput
+  staff?: Prisma.StaffOrderByWithRelationInput
 }
 
 export type StaffServiceWhereUniqueInput = Prisma.AtLeast<{
@@ -188,8 +188,8 @@ export type StaffServiceWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.StaffServiceWhereInput | Prisma.StaffServiceWhereInput[]
   staffId?: Prisma.StringFilter<"StaffService"> | string
   serviceId?: Prisma.StringFilter<"StaffService"> | string
-  staff?: Prisma.XOR<Prisma.StaffScalarRelationFilter, Prisma.StaffWhereInput>
   service?: Prisma.XOR<Prisma.ServiceScalarRelationFilter, Prisma.ServiceWhereInput>
+  staff?: Prisma.XOR<Prisma.StaffScalarRelationFilter, Prisma.StaffWhereInput>
 }, "id" | "staffId_serviceId">
 
 export type StaffServiceOrderByWithAggregationInput = {
@@ -212,8 +212,8 @@ export type StaffServiceScalarWhereWithAggregatesInput = {
 
 export type StaffServiceCreateInput = {
   id?: string
-  staff: Prisma.StaffCreateNestedOneWithoutServicesInput
   service: Prisma.ServiceCreateNestedOneWithoutStaffServicesInput
+  staff: Prisma.StaffCreateNestedOneWithoutServicesInput
 }
 
 export type StaffServiceUncheckedCreateInput = {
@@ -224,8 +224,8 @@ export type StaffServiceUncheckedCreateInput = {
 
 export type StaffServiceUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  staff?: Prisma.StaffUpdateOneRequiredWithoutServicesNestedInput
   service?: Prisma.ServiceUpdateOneRequiredWithoutStaffServicesNestedInput
+  staff?: Prisma.StaffUpdateOneRequiredWithoutServicesNestedInput
 }
 
 export type StaffServiceUncheckedUpdateInput = {
@@ -494,24 +494,24 @@ export type StaffServiceSelect<ExtArgs extends runtime.Types.Extensions.Internal
   id?: boolean
   staffId?: boolean
   serviceId?: boolean
-  staff?: boolean | Prisma.StaffDefaultArgs<ExtArgs>
   service?: boolean | Prisma.ServiceDefaultArgs<ExtArgs>
+  staff?: boolean | Prisma.StaffDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["staffService"]>
 
 export type StaffServiceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   staffId?: boolean
   serviceId?: boolean
-  staff?: boolean | Prisma.StaffDefaultArgs<ExtArgs>
   service?: boolean | Prisma.ServiceDefaultArgs<ExtArgs>
+  staff?: boolean | Prisma.StaffDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["staffService"]>
 
 export type StaffServiceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   staffId?: boolean
   serviceId?: boolean
-  staff?: boolean | Prisma.StaffDefaultArgs<ExtArgs>
   service?: boolean | Prisma.ServiceDefaultArgs<ExtArgs>
+  staff?: boolean | Prisma.StaffDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["staffService"]>
 
 export type StaffServiceSelectScalar = {
@@ -522,23 +522,23 @@ export type StaffServiceSelectScalar = {
 
 export type StaffServiceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "staffId" | "serviceId", ExtArgs["result"]["staffService"]>
 export type StaffServiceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  staff?: boolean | Prisma.StaffDefaultArgs<ExtArgs>
   service?: boolean | Prisma.ServiceDefaultArgs<ExtArgs>
+  staff?: boolean | Prisma.StaffDefaultArgs<ExtArgs>
 }
 export type StaffServiceIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  staff?: boolean | Prisma.StaffDefaultArgs<ExtArgs>
   service?: boolean | Prisma.ServiceDefaultArgs<ExtArgs>
+  staff?: boolean | Prisma.StaffDefaultArgs<ExtArgs>
 }
 export type StaffServiceIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  staff?: boolean | Prisma.StaffDefaultArgs<ExtArgs>
   service?: boolean | Prisma.ServiceDefaultArgs<ExtArgs>
+  staff?: boolean | Prisma.StaffDefaultArgs<ExtArgs>
 }
 
 export type $StaffServicePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "StaffService"
   objects: {
-    staff: Prisma.$StaffPayload<ExtArgs>
     service: Prisma.$ServicePayload<ExtArgs>
+    staff: Prisma.$StaffPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -938,8 +938,8 @@ readonly fields: StaffServiceFieldRefs;
  */
 export interface Prisma__StaffServiceClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  staff<T extends Prisma.StaffDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StaffDefaultArgs<ExtArgs>>): Prisma.Prisma__StaffClient<runtime.Types.Result.GetResult<Prisma.$StaffPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   service<T extends Prisma.ServiceDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ServiceDefaultArgs<ExtArgs>>): Prisma.Prisma__ServiceClient<runtime.Types.Result.GetResult<Prisma.$ServicePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  staff<T extends Prisma.StaffDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StaffDefaultArgs<ExtArgs>>): Prisma.Prisma__StaffClient<runtime.Types.Result.GetResult<Prisma.$StaffPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.

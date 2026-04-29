@@ -23,6 +23,11 @@ import type * as Prisma from "../internal/prismaNamespace"
  * - sentimentLabel: "positive" | "neutral" | "negative" (from Hugging Face)
  * - sentimentScore: 0.0 to 1.0 confidence score
  * - Both are nullable — null means analysis was not performed or failed
+ * 
+ * Business reply:
+ * - businessReply: the owner's public response to this review
+ * - businessReplyAt: when the reply was posted (or last edited)
+ * - Both are nullable — null means no reply has been posted yet
  */
 export type ReviewModel = runtime.Types.Result.DefaultSelection<Prisma.$ReviewPayload>
 
@@ -53,6 +58,8 @@ export type ReviewMinAggregateOutputType = {
   comment: string | null
   sentimentLabel: string | null
   sentimentScore: number | null
+  businessReply: string | null
+  businessReplyAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -66,6 +73,8 @@ export type ReviewMaxAggregateOutputType = {
   comment: string | null
   sentimentLabel: string | null
   sentimentScore: number | null
+  businessReply: string | null
+  businessReplyAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -79,6 +88,8 @@ export type ReviewCountAggregateOutputType = {
   comment: number
   sentimentLabel: number
   sentimentScore: number
+  businessReply: number
+  businessReplyAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -104,6 +115,8 @@ export type ReviewMinAggregateInputType = {
   comment?: true
   sentimentLabel?: true
   sentimentScore?: true
+  businessReply?: true
+  businessReplyAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -117,6 +130,8 @@ export type ReviewMaxAggregateInputType = {
   comment?: true
   sentimentLabel?: true
   sentimentScore?: true
+  businessReply?: true
+  businessReplyAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -130,6 +145,8 @@ export type ReviewCountAggregateInputType = {
   comment?: true
   sentimentLabel?: true
   sentimentScore?: true
+  businessReply?: true
+  businessReplyAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -230,6 +247,8 @@ export type ReviewGroupByOutputType = {
   comment: string | null
   sentimentLabel: string | null
   sentimentScore: number | null
+  businessReply: string | null
+  businessReplyAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: ReviewCountAggregateOutputType | null
@@ -266,11 +285,13 @@ export type ReviewWhereInput = {
   comment?: Prisma.StringNullableFilter<"Review"> | string | null
   sentimentLabel?: Prisma.StringNullableFilter<"Review"> | string | null
   sentimentScore?: Prisma.FloatNullableFilter<"Review"> | number | null
+  businessReply?: Prisma.StringNullableFilter<"Review"> | string | null
+  businessReplyAt?: Prisma.DateTimeNullableFilter<"Review"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Review"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Review"> | Date | string
-  customer?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   booking?: Prisma.XOR<Prisma.BookingScalarRelationFilter, Prisma.BookingWhereInput>
+  business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
+  customer?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }
 
 export type ReviewOrderByWithRelationInput = {
@@ -282,11 +303,13 @@ export type ReviewOrderByWithRelationInput = {
   comment?: Prisma.SortOrderInput | Prisma.SortOrder
   sentimentLabel?: Prisma.SortOrderInput | Prisma.SortOrder
   sentimentScore?: Prisma.SortOrderInput | Prisma.SortOrder
+  businessReply?: Prisma.SortOrderInput | Prisma.SortOrder
+  businessReplyAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
-  customer?: Prisma.UserOrderByWithRelationInput
-  business?: Prisma.BusinessOrderByWithRelationInput
   booking?: Prisma.BookingOrderByWithRelationInput
+  business?: Prisma.BusinessOrderByWithRelationInput
+  customer?: Prisma.UserOrderByWithRelationInput
 }
 
 export type ReviewWhereUniqueInput = Prisma.AtLeast<{
@@ -301,11 +324,13 @@ export type ReviewWhereUniqueInput = Prisma.AtLeast<{
   comment?: Prisma.StringNullableFilter<"Review"> | string | null
   sentimentLabel?: Prisma.StringNullableFilter<"Review"> | string | null
   sentimentScore?: Prisma.FloatNullableFilter<"Review"> | number | null
+  businessReply?: Prisma.StringNullableFilter<"Review"> | string | null
+  businessReplyAt?: Prisma.DateTimeNullableFilter<"Review"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Review"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Review"> | Date | string
-  customer?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
   booking?: Prisma.XOR<Prisma.BookingScalarRelationFilter, Prisma.BookingWhereInput>
+  business?: Prisma.XOR<Prisma.BusinessScalarRelationFilter, Prisma.BusinessWhereInput>
+  customer?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }, "id" | "bookingId">
 
 export type ReviewOrderByWithAggregationInput = {
@@ -317,6 +342,8 @@ export type ReviewOrderByWithAggregationInput = {
   comment?: Prisma.SortOrderInput | Prisma.SortOrder
   sentimentLabel?: Prisma.SortOrderInput | Prisma.SortOrder
   sentimentScore?: Prisma.SortOrderInput | Prisma.SortOrder
+  businessReply?: Prisma.SortOrderInput | Prisma.SortOrder
+  businessReplyAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ReviewCountOrderByAggregateInput
@@ -338,6 +365,8 @@ export type ReviewScalarWhereWithAggregatesInput = {
   comment?: Prisma.StringNullableWithAggregatesFilter<"Review"> | string | null
   sentimentLabel?: Prisma.StringNullableWithAggregatesFilter<"Review"> | string | null
   sentimentScore?: Prisma.FloatNullableWithAggregatesFilter<"Review"> | number | null
+  businessReply?: Prisma.StringNullableWithAggregatesFilter<"Review"> | string | null
+  businessReplyAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Review"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Review"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Review"> | Date | string
 }
@@ -348,11 +377,13 @@ export type ReviewCreateInput = {
   comment?: string | null
   sentimentLabel?: string | null
   sentimentScore?: number | null
+  businessReply?: string | null
+  businessReplyAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  customer: Prisma.UserCreateNestedOneWithoutReviewsInput
-  business: Prisma.BusinessCreateNestedOneWithoutReviewsInput
   booking: Prisma.BookingCreateNestedOneWithoutReviewInput
+  business: Prisma.BusinessCreateNestedOneWithoutReviewsInput
+  customer: Prisma.UserCreateNestedOneWithoutReviewsInput
 }
 
 export type ReviewUncheckedCreateInput = {
@@ -364,6 +395,8 @@ export type ReviewUncheckedCreateInput = {
   comment?: string | null
   sentimentLabel?: string | null
   sentimentScore?: number | null
+  businessReply?: string | null
+  businessReplyAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -374,11 +407,13 @@ export type ReviewUpdateInput = {
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  businessReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessReplyAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  customer?: Prisma.UserUpdateOneRequiredWithoutReviewsNestedInput
-  business?: Prisma.BusinessUpdateOneRequiredWithoutReviewsNestedInput
   booking?: Prisma.BookingUpdateOneRequiredWithoutReviewNestedInput
+  business?: Prisma.BusinessUpdateOneRequiredWithoutReviewsNestedInput
+  customer?: Prisma.UserUpdateOneRequiredWithoutReviewsNestedInput
 }
 
 export type ReviewUncheckedUpdateInput = {
@@ -390,6 +425,8 @@ export type ReviewUncheckedUpdateInput = {
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  businessReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessReplyAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -403,6 +440,8 @@ export type ReviewCreateManyInput = {
   comment?: string | null
   sentimentLabel?: string | null
   sentimentScore?: number | null
+  businessReply?: string | null
+  businessReplyAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -413,6 +452,8 @@ export type ReviewUpdateManyMutationInput = {
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  businessReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessReplyAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -426,6 +467,8 @@ export type ReviewUncheckedUpdateManyInput = {
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  businessReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessReplyAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -454,6 +497,8 @@ export type ReviewCountOrderByAggregateInput = {
   comment?: Prisma.SortOrder
   sentimentLabel?: Prisma.SortOrder
   sentimentScore?: Prisma.SortOrder
+  businessReply?: Prisma.SortOrder
+  businessReplyAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -472,6 +517,8 @@ export type ReviewMaxOrderByAggregateInput = {
   comment?: Prisma.SortOrder
   sentimentLabel?: Prisma.SortOrder
   sentimentScore?: Prisma.SortOrder
+  businessReply?: Prisma.SortOrder
+  businessReplyAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -485,6 +532,8 @@ export type ReviewMinOrderByAggregateInput = {
   comment?: Prisma.SortOrder
   sentimentLabel?: Prisma.SortOrder
   sentimentScore?: Prisma.SortOrder
+  businessReply?: Prisma.SortOrder
+  businessReplyAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -624,10 +673,12 @@ export type ReviewCreateWithoutCustomerInput = {
   comment?: string | null
   sentimentLabel?: string | null
   sentimentScore?: number | null
+  businessReply?: string | null
+  businessReplyAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  business: Prisma.BusinessCreateNestedOneWithoutReviewsInput
   booking: Prisma.BookingCreateNestedOneWithoutReviewInput
+  business: Prisma.BusinessCreateNestedOneWithoutReviewsInput
 }
 
 export type ReviewUncheckedCreateWithoutCustomerInput = {
@@ -638,6 +689,8 @@ export type ReviewUncheckedCreateWithoutCustomerInput = {
   comment?: string | null
   sentimentLabel?: string | null
   sentimentScore?: number | null
+  businessReply?: string | null
+  businessReplyAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -680,6 +733,8 @@ export type ReviewScalarWhereInput = {
   comment?: Prisma.StringNullableFilter<"Review"> | string | null
   sentimentLabel?: Prisma.StringNullableFilter<"Review"> | string | null
   sentimentScore?: Prisma.FloatNullableFilter<"Review"> | number | null
+  businessReply?: Prisma.StringNullableFilter<"Review"> | string | null
+  businessReplyAt?: Prisma.DateTimeNullableFilter<"Review"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Review"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Review"> | Date | string
 }
@@ -690,10 +745,12 @@ export type ReviewCreateWithoutBusinessInput = {
   comment?: string | null
   sentimentLabel?: string | null
   sentimentScore?: number | null
+  businessReply?: string | null
+  businessReplyAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  customer: Prisma.UserCreateNestedOneWithoutReviewsInput
   booking: Prisma.BookingCreateNestedOneWithoutReviewInput
+  customer: Prisma.UserCreateNestedOneWithoutReviewsInput
 }
 
 export type ReviewUncheckedCreateWithoutBusinessInput = {
@@ -704,6 +761,8 @@ export type ReviewUncheckedCreateWithoutBusinessInput = {
   comment?: string | null
   sentimentLabel?: string | null
   sentimentScore?: number | null
+  businessReply?: string | null
+  businessReplyAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -740,10 +799,12 @@ export type ReviewCreateWithoutBookingInput = {
   comment?: string | null
   sentimentLabel?: string | null
   sentimentScore?: number | null
+  businessReply?: string | null
+  businessReplyAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  customer: Prisma.UserCreateNestedOneWithoutReviewsInput
   business: Prisma.BusinessCreateNestedOneWithoutReviewsInput
+  customer: Prisma.UserCreateNestedOneWithoutReviewsInput
 }
 
 export type ReviewUncheckedCreateWithoutBookingInput = {
@@ -754,6 +815,8 @@ export type ReviewUncheckedCreateWithoutBookingInput = {
   comment?: string | null
   sentimentLabel?: string | null
   sentimentScore?: number | null
+  businessReply?: string | null
+  businessReplyAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -780,10 +843,12 @@ export type ReviewUpdateWithoutBookingInput = {
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  businessReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessReplyAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  customer?: Prisma.UserUpdateOneRequiredWithoutReviewsNestedInput
   business?: Prisma.BusinessUpdateOneRequiredWithoutReviewsNestedInput
+  customer?: Prisma.UserUpdateOneRequiredWithoutReviewsNestedInput
 }
 
 export type ReviewUncheckedUpdateWithoutBookingInput = {
@@ -794,6 +859,8 @@ export type ReviewUncheckedUpdateWithoutBookingInput = {
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  businessReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessReplyAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -806,6 +873,8 @@ export type ReviewCreateManyCustomerInput = {
   comment?: string | null
   sentimentLabel?: string | null
   sentimentScore?: number | null
+  businessReply?: string | null
+  businessReplyAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -816,10 +885,12 @@ export type ReviewUpdateWithoutCustomerInput = {
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  businessReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessReplyAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  business?: Prisma.BusinessUpdateOneRequiredWithoutReviewsNestedInput
   booking?: Prisma.BookingUpdateOneRequiredWithoutReviewNestedInput
+  business?: Prisma.BusinessUpdateOneRequiredWithoutReviewsNestedInput
 }
 
 export type ReviewUncheckedUpdateWithoutCustomerInput = {
@@ -830,6 +901,8 @@ export type ReviewUncheckedUpdateWithoutCustomerInput = {
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  businessReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessReplyAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -842,6 +915,8 @@ export type ReviewUncheckedUpdateManyWithoutCustomerInput = {
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  businessReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessReplyAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -854,6 +929,8 @@ export type ReviewCreateManyBusinessInput = {
   comment?: string | null
   sentimentLabel?: string | null
   sentimentScore?: number | null
+  businessReply?: string | null
+  businessReplyAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -864,10 +941,12 @@ export type ReviewUpdateWithoutBusinessInput = {
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  businessReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessReplyAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  customer?: Prisma.UserUpdateOneRequiredWithoutReviewsNestedInput
   booking?: Prisma.BookingUpdateOneRequiredWithoutReviewNestedInput
+  customer?: Prisma.UserUpdateOneRequiredWithoutReviewsNestedInput
 }
 
 export type ReviewUncheckedUpdateWithoutBusinessInput = {
@@ -878,6 +957,8 @@ export type ReviewUncheckedUpdateWithoutBusinessInput = {
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  businessReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessReplyAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -890,6 +971,8 @@ export type ReviewUncheckedUpdateManyWithoutBusinessInput = {
   comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sentimentScore?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  businessReply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  businessReplyAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -905,11 +988,13 @@ export type ReviewSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   comment?: boolean
   sentimentLabel?: boolean
   sentimentScore?: boolean
+  businessReply?: boolean
+  businessReplyAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  customer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
+  customer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["review"]>
 
 export type ReviewSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -921,11 +1006,13 @@ export type ReviewSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   comment?: boolean
   sentimentLabel?: boolean
   sentimentScore?: boolean
+  businessReply?: boolean
+  businessReplyAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  customer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
+  customer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["review"]>
 
 export type ReviewSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -937,11 +1024,13 @@ export type ReviewSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   comment?: boolean
   sentimentLabel?: boolean
   sentimentScore?: boolean
+  businessReply?: boolean
+  businessReplyAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  customer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
+  customer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["review"]>
 
 export type ReviewSelectScalar = {
@@ -953,33 +1042,35 @@ export type ReviewSelectScalar = {
   comment?: boolean
   sentimentLabel?: boolean
   sentimentScore?: boolean
+  businessReply?: boolean
+  businessReplyAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ReviewOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "businessId" | "bookingId" | "rating" | "comment" | "sentimentLabel" | "sentimentScore" | "createdAt" | "updatedAt", ExtArgs["result"]["review"]>
+export type ReviewOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "customerId" | "businessId" | "bookingId" | "rating" | "comment" | "sentimentLabel" | "sentimentScore" | "businessReply" | "businessReplyAt" | "createdAt" | "updatedAt", ExtArgs["result"]["review"]>
 export type ReviewInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  customer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
+  customer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 export type ReviewIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  customer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
+  customer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 export type ReviewIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  customer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
-  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
   booking?: boolean | Prisma.BookingDefaultArgs<ExtArgs>
+  business?: boolean | Prisma.BusinessDefaultArgs<ExtArgs>
+  customer?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
 
 export type $ReviewPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Review"
   objects: {
-    customer: Prisma.$UserPayload<ExtArgs>
-    business: Prisma.$BusinessPayload<ExtArgs>
     booking: Prisma.$BookingPayload<ExtArgs>
+    business: Prisma.$BusinessPayload<ExtArgs>
+    customer: Prisma.$UserPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -990,6 +1081,8 @@ export type $ReviewPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     comment: string | null
     sentimentLabel: string | null
     sentimentScore: number | null
+    businessReply: string | null
+    businessReplyAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["review"]>
@@ -1386,9 +1479,9 @@ readonly fields: ReviewFieldRefs;
  */
 export interface Prisma__ReviewClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  customer<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  business<T extends Prisma.BusinessDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BusinessDefaultArgs<ExtArgs>>): Prisma.Prisma__BusinessClient<runtime.Types.Result.GetResult<Prisma.$BusinessPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   booking<T extends Prisma.BookingDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BookingDefaultArgs<ExtArgs>>): Prisma.Prisma__BookingClient<runtime.Types.Result.GetResult<Prisma.$BookingPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  business<T extends Prisma.BusinessDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BusinessDefaultArgs<ExtArgs>>): Prisma.Prisma__BusinessClient<runtime.Types.Result.GetResult<Prisma.$BusinessPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  customer<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1426,6 +1519,8 @@ export interface ReviewFieldRefs {
   readonly comment: Prisma.FieldRef<"Review", 'String'>
   readonly sentimentLabel: Prisma.FieldRef<"Review", 'String'>
   readonly sentimentScore: Prisma.FieldRef<"Review", 'Float'>
+  readonly businessReply: Prisma.FieldRef<"Review", 'String'>
+  readonly businessReplyAt: Prisma.FieldRef<"Review", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Review", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Review", 'DateTime'>
 }

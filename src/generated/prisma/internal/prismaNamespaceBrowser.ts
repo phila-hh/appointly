@@ -68,7 +68,8 @@ export const ModelName = {
   StaffService: 'StaffService',
   StaffHours: 'StaffHours',
   Review: 'Review',
-  Favorite: 'Favorite'
+  Favorite: 'Favorite',
+  Notification: 'Notification'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -91,11 +92,11 @@ export const UserScalarFieldEnum = {
   id: 'id',
   name: 'name',
   email: 'email',
-  emailVerified: 'emailVerified',
   image: 'image',
   password: 'password',
   phone: 'phone',
   role: 'role',
+  emailVerified: 'emailVerified',
   emailPreferences: 'emailPreferences',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -182,6 +183,8 @@ export const BusinessScalarFieldEnum = {
   image: 'image',
   coverImage: 'coverImage',
   isActive: 'isActive',
+  announcement: 'announcement',
+  announcementExpiresAt: 'announcementExpiresAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -229,9 +232,11 @@ export const BookingScalarFieldEnum = {
   status: 'status',
   notes: 'notes',
   totalPrice: 'totalPrice',
-  isCancellable: 'isCancellable',
   cancellationDeadline: 'cancellationDeadline',
   cancellationFee: 'cancellationFee',
+  isCancellable: 'isCancellable',
+  rescheduleCount: 'rescheduleCount',
+  warningEmailSentAt: 'warningEmailSentAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -242,9 +247,11 @@ export type BookingScalarFieldEnum = (typeof BookingScalarFieldEnum)[keyof typeo
 export const PaymentScalarFieldEnum = {
   id: 'id',
   bookingId: 'bookingId',
-  chapaTransactionRef: 'chapaTransactionRef',
   amount: 'amount',
   status: 'status',
+  chapaTransactionRef: 'chapaTransactionRef',
+  refundStatus: 'refundStatus',
+  refundedAt: 'refundedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -333,6 +340,8 @@ export const ReviewScalarFieldEnum = {
   comment: 'comment',
   sentimentLabel: 'sentimentLabel',
   sentimentScore: 'sentimentScore',
+  businessReply: 'businessReply',
+  businessReplyAt: 'businessReplyAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -348,6 +357,21 @@ export const FavoriteScalarFieldEnum = {
 } as const
 
 export type FavoriteScalarFieldEnum = (typeof FavoriteScalarFieldEnum)[keyof typeof FavoriteScalarFieldEnum]
+
+
+export const NotificationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  type: 'type',
+  title: 'title',
+  message: 'message',
+  link: 'link',
+  isRead: 'isRead',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type NotificationScalarFieldEnum = (typeof NotificationScalarFieldEnum)[keyof typeof NotificationScalarFieldEnum]
 
 
 export const SortOrder = {
