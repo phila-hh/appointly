@@ -15,8 +15,16 @@
  *   5. Verify transaction via API to confirm payment status
  *   6. Webhook fires asynchronously for server-side confirmation
  *
- * All API calls use the server-side secret key (CHAPA_SECRET_KEY)
- * This module would never be imported in client components
+ * Refund flow:
+ *   1. Cancellation triggers processRefund() in payment.ts
+ *   2. chapaRefund() is called with the original tx_ref and amount
+ *   3. Test mode: simulates success immediately (Chapa sandbox does not
+ *      process real refunds — this is expected for FYP/test environments)
+ *   4. Live mode: POSTs to Chapa's refund endpoint
+ *   5. Refund typically takes 3–5 business days to reach the customer
+ *
+ * All API calls use the server-side secret key (CHAPA_SECRET_KEY).
+ * This module is never imported in client components.
  *
  * @see https://developer.chapa.co/integrations/accept-payments/
  */
@@ -25,7 +33,7 @@
 const CHAPA_API_BASE = "https://api.chapa.co/v1";
 
 /**
- * Retrieves the Chapa secret key from environmental variables.
+ * Retrieves the Chapa secret key from environment variables.
  * Throws if the key is not configured.
  */
 function getSecretKey(): string {
@@ -33,8 +41,17 @@ function getSecretKey(): string {
   if (!key) {
     throw new Error("CHAPA_SECRET_KEY is not set. Add it to your .env file.");
   }
-
   return key;
+}
+
+/**
+ * Returns true when running against the Chapa test/sandbox environment.
+ * Test keys begin with "CHASECK_TEST_".
+ * Used to simulate refund success without hitting a live endpoint.
+ */
+function isTestMode(): boolean {
+  const key = process.env.CHAPA_SECRET_KEY ?? "";
+  return key.startsWith("CHASECK_TEST_");
 }
 
 // =============================================================================
@@ -55,15 +72,15 @@ export interface ChapaInitializeParams {
   txRef: string;
   /** URL Chapa redirects the customer to after payment */
   returnUrl: string;
-  /**  URL Chapa sends webhook POST to after payment */
+  /** URL Chapa sends webhook POST to after payment */
   callbackUrl: string;
-  /** Title shown on Chapa's checkout  page */
+  /** Title shown on Chapa's checkout page */
   title?: string;
   /** Description shown on Chapa's checkout page */
   description?: string;
 }
 
-/** Successful response form Chapa's initialize endpoint. */
+/** Successful response from Chapa's initialize endpoint. */
 export interface ChapaInitializeResponse {
   message: string;
   status: "success";
@@ -92,6 +109,17 @@ export interface ChapaVerifyResponse {
     created_at: string;
     updated_at: string;
   } | null;
+}
+
+/**
+ * Response from Chapa's refund endpoint.
+ *
+ * In test mode this shape is simulated locally — no real API call is made.
+ * In live mode this reflects the actual Chapa API response body.
+ */
+export interface ChapaRefundResponse {
+  status: "success" | "failed";
+  message: string;
 }
 
 /** Error response from Chapa API. */
@@ -182,7 +210,7 @@ export async function chapaInitialize(
  * server-side through this endpoint.
  *
  * @param txRef - The unique transaction reference used during initialization
- * @returns The verification response with payment detail
+ * @returns The verification response with payment details
  * @throws Error if the API call fails
  *
  * @example
@@ -212,7 +240,7 @@ export async function chapaVerify(txRef: string): Promise<ChapaVerifyResponse> {
     console.error("Chapa verify error:", data);
     throw new Error(
       (data as ChapaErrorResponse).message ??
-        "Failed to verify payment with Chapa"
+        "Failed to verify payment with Chapa."
     );
   }
 
@@ -220,12 +248,101 @@ export async function chapaVerify(txRef: string): Promise<ChapaVerifyResponse> {
 }
 
 /**
+ * Requests a refund for a previously completed Chapa transaction.
+ *
+ * Test mode behaviour:
+ *   When CHAPA_SECRET_KEY begins with "CHASECK_TEST_", no real API call
+ *   is made. The function waits 100ms to simulate network latency and
+ *   returns a synthetic success response. This is the expected behaviour
+ *   for FYP / sandbox environments — Chapa's test environment does not
+ *   process real refunds.
+ *
+ * Live mode behaviour:
+ *   POSTs to Chapa's refund endpoint with the original transaction
+ *   reference and the refund amount. Chapa typically processes refunds
+ *   within 3–5 business days.
+ *
+ * Future-proofing:
+ *   Switching from test to live mode requires only updating the
+ *   CHAPA_SECRET_KEY environment variable. No code changes needed.
+ *
+ * @param txRef  - The original transaction reference to refund
+ * @param amount - The amount to refund in ETB (full refund only for now)
+ * @returns ChapaRefundResponse with status and message
+ *
+ * @example
+ * ```ts
+ * const result = await chapaRefund("appointly-abc123-1700000000", 350);
+ * if (result.status === "success") {
+ *   // Update payment record as refunded
+ * }
+ * ```
+ */
+export async function chapaRefund(
+  txRef: string,
+  amount: number
+): Promise<ChapaRefundResponse> {
+  // -------------------------------------------------------------------------
+  // Test mode: simulate success — Chapa sandbox does not process refunds
+  // -------------------------------------------------------------------------
+  if (isTestMode()) {
+    console.log(
+      `💸 [TEST MODE] Simulating refund for tx_ref=${txRef}, amount=${amount} ETB`
+    );
+
+    // Simulate realistic network delay
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    return {
+      status: "success",
+      message: "Refund simulated successfully (test mode).",
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // Live mode: call the real Chapa refund endpoint
+  // -------------------------------------------------------------------------
+  const secretKey = getSecretKey();
+
+  const response = await fetch(`${CHAPA_API_BASE}/refund`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secretKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      tx_ref: txRef,
+      amount: amount.toString(),
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error("Chapa refund error:", data);
+    // Return a failed response rather than throwing — the caller
+    // (processRefund in payment.ts) handles the failure gracefully
+    return {
+      status: "failed",
+      message:
+        (data as ChapaErrorResponse).message ??
+        "Refund request failed with Chapa.",
+    };
+  }
+
+  return {
+    status: "success",
+    message: data.message ?? "Refund processed successfully.",
+  };
+}
+
+/**
  * Generate a unique transaction reference for a booking.
  *
- * Format: appointly-{bookingId}-{timestamp}
+ * Format: appointly-{shortBookingId}-{timestamp}
  * This ensures uniqueness even if the same booking is retried.
  *
- * @param bookingId - The booking this payment if for.
+ * @param bookingId - The booking this payment is for
  * @returns A unique tx_ref string
  */
 export function generateTxRef(bookingId: string): string {
