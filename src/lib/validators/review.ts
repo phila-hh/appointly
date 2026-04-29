@@ -1,11 +1,12 @@
 /**
  * @file Review Validation Schemas
- * @description Zod schemas for review submission and management.
+ * @description Zod schemas for review submission, management, and business replies.
  *
  * Used by:
  *   - Review form (client-side validation)
  *   - createReview server action (server-side validation)
  *   - updateReview server action (server-side validation)
+ *   - updateReviewReply server action (server-side validation)
  */
 
 import { z } from "zod";
@@ -14,8 +15,8 @@ import { z } from "zod";
  * Schema for creating or updating a review.
  *
  * Rules:
- *   - Rating: required, integer between 1 and 5 (inclusive)
- *   - Comment: optional, max 1000 characters
+ *   - rating: required, integer between 1 and 5 (inclusive)
+ *   - comment: optional, max 1000 characters
  */
 export const reviewSchema = z.object({
   rating: z
@@ -30,7 +31,7 @@ export const reviewSchema = z.object({
     .or(z.literal("")),
 });
 
-/** TypeScript type inferred from the review schema */
+/** TypeScript type inferred from the review schema. */
 export type ReviewFormValues = z.infer<typeof reviewSchema>;
 
 /**
@@ -43,3 +44,29 @@ export const createReviewSchema = reviewSchema.extend({
 
 /** TypeScript type for review creation. */
 export type CreateReviewValues = z.infer<typeof createReviewSchema>;
+
+/**
+ * Schema for a business owner's reply to a customer review.
+ *
+ * Rules:
+ *   - reply: required when posting, max 1000 characters
+ *
+ * Business rules enforced in the server action (not here):
+ *   - Only the business owner whose business received the review may reply
+ *   - One reply per review — subsequent calls overwrite the existing reply
+ *   - Passing null or empty string clears the reply entirely
+ *
+ * Note: reply is optional here (z.string().optional()) to support
+ * the clear-reply case where the owner deletes their response.
+ * The server action validates the intent separately.
+ */
+export const reviewReplySchema = z.object({
+  reply: z
+    .string()
+    .max(1000, { error: "Reply must be less than 1000 characters." })
+    .optional()
+    .or(z.literal("")),
+});
+
+/** TypeScript type for review reply. */
+export type ReviewReplyValues = z.infer<typeof reviewReplySchema>;
