@@ -3,24 +3,27 @@
  * @description Incoming booking management for business owners.
  *
  * Features:
+ *   - Overdue bookings alert — banner shown when past confirmed bookings
+ *     have not been marked complete or no-show
  *   - Status filter (All, Pending, Confirmed, etc.)
  *   - Staff filter — filter bookings by assigned team member
  *   - Assigned staff name shown on each booking card
  *   - Returning customer badge when customer has 3+ bookings at this business
- *   - Overdue bookings alert for past confirmed appointments
  *   - Reuses BookingList component with BUSINESS_OWNER role config
  *
  * URL: /dashboard/bookings
  */
 
 import { Suspense } from "react";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 
 import { requireBusiness } from "@/lib/actions/business-queries";
 import { getBusinessBookings } from "@/lib/actions/booking-queries";
 import { getBusinessStaff } from "@/lib/actions/staff-queries";
+import db from "@/lib/db";
 import { BookingList } from "@/components/shared/booking-list";
 import { StaffBookingFilter } from "@/components/shared/staff-booking-filter";
+import { OverdueBookingsAlert } from "@/components/shared/overdue-bookings-alert";
 
 export const metadata = {
   title: "Bookings",
@@ -33,12 +36,23 @@ interface DashboardBookingsPageProps {
 export default async function DashboardBookingsPage({
   searchParams,
 }: DashboardBookingsPageProps) {
-  await requireBusiness();
-
+  const business = await requireBusiness();
   const params = await searchParams;
 
-  const bookings = await getBusinessBookings(params.status, params.staffId);
-  const staff = await getBusinessStaff();
+  // Fetch bookings, staff, and overdue count in parallel
+  const [bookings, staff, overdueCount] = await Promise.all([
+    getBusinessBookings(params.status, params.staffId),
+    getBusinessStaff(),
+    // Count confirmed bookings whose date has passed (before today's start)
+    db.booking.count({
+      where: {
+        businessId: business.id,
+        status: "CONFIRMED",
+        date: { lt: startOfDay(new Date()) },
+      },
+    }),
+  ]);
+
   const hasStaff = staff.length > 0;
 
   const serializedStaff = staff.map((member) => ({
@@ -56,18 +70,16 @@ export default async function DashboardBookingsPage({
     totalPrice: Number(booking.totalPrice),
     notes: booking.notes,
     createdAt: booking.createdAt.toISOString(),
-    // Business owners do not need these for rescheduling (only customers reschedule)
-    // but they are included for type consistency with BookingData
     cancellationDeadline: booking.cancellationDeadline?.toISOString() ?? null,
     rescheduleCount: booking.rescheduleCount,
     business: {
-      id: "", // not needed — business owner is viewing their own business
+      id: "",
       name: "",
       slug: "",
       image: null,
     },
     service: {
-      id: "", // not needed — business owner does not reschedule
+      id: "",
       name: booking.service.name,
       duration: booking.service.duration,
     },
@@ -96,6 +108,10 @@ export default async function DashboardBookingsPage({
         </p>
       </div>
 
+      {/* Overdue bookings alert — rendered above all filters */}
+      <OverdueBookingsAlert count={overdueCount} />
+
+      {/* Staff filter */}
       {hasStaff && (
         <StaffBookingFilter
           staffMembers={serializedStaff}
