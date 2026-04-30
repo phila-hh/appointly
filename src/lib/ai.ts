@@ -65,6 +65,8 @@ export interface SearchIntent {
   category?: string | null;
   /** Maximum price the customer is willing to pay (in ETB) */
   maxPrice?: number | null;
+  /** Minimum acceptable average rating (1.0 – 5.0) */
+  minRating?: number | null;
   /** City name to filter by */
   city?: string | null;
   /** Days of the week the customer wants availability */
@@ -73,6 +75,13 @@ export interface SearchIntent {
   serviceKeywords?: string[] | null;
   /** General search terms to match against business names/description */
   searchTerms?: string | null;
+  /**
+   * How results should be sorted.
+   * "relevance" — composite score (rating × 0.4 + bookings × 0.3 + services × 0.3)
+   * "rating"    — highest average rating first
+   * "price"     — lowest service price first
+   */
+  sortBy?: "relevance" | "rating" | "price" | null;
   /** Human-readable explanation of what the AI understood */
   explanation?: string | null;
 }
@@ -340,18 +349,20 @@ Extract these fields (use null for anything you can't determine):
 {
   "category": one of [${VALID_CATEGORIES.map((c) => `"${c}"`).join(", ")}] or null,
   "maxPrice": number in ETB (Ethiopian Birr) or null. "cheap"/"affordable" = 200, "moderate" = 500, "expensive"/"premium" = 1000+,
+  "minRating": number from 1.0 to 5.0 or null. "top rated"/"best" = 4.5, "good" = 4.0, "highly rated" = 4.5,
   "city": city name string or null,
   "dayOfWeek": array of [${VALID_DAYS.map((d) => `"${d}"`).join(", ")}] or null. "weekend" = ["SATURDAY", "SUNDAY"], "weekday" = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"],
   "serviceKeywords": array of service-related keywords or null,
   "searchTerms": general search text to match business names/descriptions or null,
+  "sortBy": one of ["relevance", "rating", "price"] or null. "cheapest"/"lowest price" = "price", "best rated"/"top" = "rating", default = "relevance",
   "explanation": brief human-readable summary of what you understood (always include this)
 }
 
 Examples:
-- "cheap haircut near Bole" → {"category":"BARBERSHOP","maxPrice":200,"city":"Addis Ababa","dayOfWeek":null,"serviceKeywords":["haircut"],"searchTerms":"haircut","explanation":"Looking for affordable barbershops near Bole, Addis Ababa"}
-- "massage this weekend" → {"category":"SPA","maxPrice":null,"city":null,"dayOfWeek":["SATURDAY","SUNDAY"],"serviceKeywords":["massage"],"searchTerms":"massage","explanation":"Looking for spa services offering massage this weekend"}
-- "dentist in Mekelle" → {"category":"DENTAL","maxPrice":null,"city":"Mekelle","dayOfWeek":null,"serviceKeywords":null,"searchTerms":"dentist","explanation":"Looking for dental clinics in Mekelle"}
-- "yoga classes" → {"category":"FITNESS","maxPrice":null,"city":null,"dayOfWeek":null,"serviceKeywords":["yoga"],"searchTerms":"yoga","explanation":"Looking for fitness studios offering yoga classes"}`;
+- "cheap haircut near Bole" → {"category":"BARBERSHOP","maxPrice":200,"minRating":null,"city":"Addis Ababa","dayOfWeek":null,"serviceKeywords":["haircut"],"searchTerms":"haircut","sortBy":"price","explanation":"Looking for affordable barbershops near Bole, Addis Ababa, sorted by price"}
+- "best rated massage this weekend" → {"category":"SPA","maxPrice":null,"minRating":4.5,"city":null,"dayOfWeek":["SATURDAY","SUNDAY"],"serviceKeywords":["massage"],"searchTerms":"massage","sortBy":"rating","explanation":"Looking for top-rated spa massage services available on weekends"}
+- "dentist in Mekelle" → {"category":"DENTAL","maxPrice":null,"minRating":null,"city":"Mekelle","dayOfWeek":null,"serviceKeywords":null,"searchTerms":"dentist","sortBy":"relevance","explanation":"Looking for dental clinics in Mekelle"}
+- "top yoga classes under 500 birr" → {"category":"FITNESS","maxPrice":500,"minRating":4.0,"city":null,"dayOfWeek":null,"serviceKeywords":["yoga"],"searchTerms":"yoga","sortBy":"rating","explanation":"Looking for well-rated fitness studios offering affordable yoga classes"}`;
 }
 
 /**
@@ -520,6 +531,25 @@ export async function extractSearchIntent(
       parsed.searchTerms.trim()
     ) {
       intent.searchTerms = parsed.searchTerms;
+    }
+
+    // Validate minRating
+    if (
+      parsed.minRating &&
+      typeof parsed.minRating === "number" &&
+      parsed.minRating >= 1.0 &&
+      parsed.minRating <= 5.0
+    ) {
+      intent.minRating = parseFloat(parsed.minRating.toFixed(1));
+    }
+
+    // Validate sortBy
+    if (
+      parsed.sortBy &&
+      typeof parsed.sortBy === "string" &&
+      ["relevance", "rating", "price"].includes(parsed.sortBy)
+    ) {
+      intent.sortBy = parsed.sortBy as "relevance" | "rating" | "price";
     }
 
     // Validate explanation

@@ -7,17 +7,17 @@
  *   2. Check rate limit (10 searches/hour per user)
  *   3. Send query to OpenRouter LLM for intent extraction
  *   4. Build structured database query from extracted intent
- *   5. Execute query and return results with AI explanation
+ *   5. Post-fetch scoring and sorting
+ *   6. Return results with AI explanation
+ *
+ * Post-fetch scoring (when sortBy = "relevance" or unspecified):
+ *   score = (avgRating / 5 × 0.4) + (normalizedBookings × 0.3) + (normalizedServices × 0.3)
+ *   All components normalized to [0, 1] range before combining.
  *
  * Fallback behavior:
- *   - If LLM extraction fails → falls back to basic text search
- *   - If no results from AI query → suggests clearing filters
- *   - Rate limit exceeded → returns friendly error with retry time
- *
- * Security:
- *   - Requires authentication (signed-in users only)
- *   - Rate limited to prevent API abuse
- *   - Input sanitized before sending to LLM
+ *   - LLM fails → basic text search
+ *   - No results → friendly empty state message
+ *   - Rate limited → retry time shown
  */
 
 "use server";
@@ -32,7 +32,6 @@ import type { Prisma } from "@/generated/prisma/client";
 // Types
 // =============================================================================
 
-/** A single business result from AI search. */
 export interface AISearchBusinessResult {
   id: string;
   slug: string;
@@ -47,7 +46,10 @@ export interface AISearchBusinessResult {
     reviews: number;
   };
   reviews: { rating: number }[];
-  /** Matching services (when filtered by service keywords). */
+  /** Computed average rating (null if no reviews). */
+  averageRating: number | null;
+  /** Computed relevance score for client display (optional). */
+  relevanceScore?: number;
   matchingServices?: {
     name: string;
     price: number;
@@ -55,47 +57,24 @@ export interface AISearchBusinessResult {
   }[];
 }
 
-/** Complete result from the AI search action. */
 export interface AISearchResult {
-  /** Whether the search succeeded. */
   success: boolean;
-  /** Error message (if success is false). */
   error?: string;
-  /** The extracted search intent (for display purposes). */
   intent?: SearchIntent | null;
-  /** Matching businesses. */
   businesses: AISearchBusinessResult[];
-  /** Total number of matches. */
   totalCount: number;
-  /** Whether the LLM was used (false = fell back to basic search). */
   usedAI: boolean;
-  /** Rate limit info. */
   remaining?: number;
 }
 
-/** Maximum number of AI search results to return. */
 const MAX_AI_RESULTS = 12;
 
 // =============================================================================
 // AI Search Action
 // =============================================================================
 
-/**
- * Performs a natural language search for businesses.
- *
- * Takes a free-text query like "cheap haircut near Bole open Saturday"
- * and returns matching businesses with an AI-generated explanation
- * of what was understood.
- *
- * @param query - The user's natural language search query
- * @returns AISearchResult with businesses and metadata
- */
 export async function aiSearch(query: string): Promise<AISearchResult> {
   try {
-    // -------------------------------------------------------------------------
-    // Step 1: Authentication check
-    // -------------------------------------------------------------------------
-
     const user = await getCurrentUser();
 
     if (!user) {
@@ -107,10 +86,6 @@ export async function aiSearch(query: string): Promise<AISearchResult> {
         usedAI: false,
       };
     }
-
-    // -------------------------------------------------------------------------
-    // Step 2: Input validation
-    // -------------------------------------------------------------------------
 
     const trimmedQuery = query.trim();
 
@@ -135,15 +110,10 @@ export async function aiSearch(query: string): Promise<AISearchResult> {
       };
     }
 
-    // -------------------------------------------------------------------------
-    // Step 3: Rate limit check
-    // -------------------------------------------------------------------------
-
     const rateLimitResult = aiSearchLimiter.check(user.id);
 
     if (!rateLimitResult.allowed) {
       const retryMinutes = Math.ceil(rateLimitResult.retryAfterMs / 60000);
-
       return {
         success: false,
         error: `You've reached the AI search limit (10 per hour). Try again in ${retryMinutes} minute${retryMinutes === 1 ? "" : "s"}, or use the standard filters below.`,
@@ -154,26 +124,16 @@ export async function aiSearch(query: string): Promise<AISearchResult> {
       };
     }
 
-    // -------------------------------------------------------------------------
-    // Step 4: Extract search intent via LLM
-    // -------------------------------------------------------------------------
-
     const intent = await extractSearchIntent(trimmedQuery);
-
-    // -------------------------------------------------------------------------
-    // Step 5: Build and execute database query
-    // -------------------------------------------------------------------------
 
     let businesses: AISearchBusinessResult[];
     let totalCount: number;
 
     if (intent) {
-      // AI-powered structured search
       const result = await executeAIQuery(intent);
       businesses = result.businesses;
       totalCount = result.totalCount;
     } else {
-      // Fallback to basic text search if LLM fails
       const result = await executeBasicSearch(trimmedQuery);
       businesses = result.businesses;
       totalCount = result.totalCount;
@@ -201,26 +161,52 @@ export async function aiSearch(query: string): Promise<AISearchResult> {
 }
 
 // =============================================================================
-// Query Builders
+// Scoring
 // =============================================================================
 
 /**
- * Executes a structured database query from AI-extracted intent.
+ * Computes a composite relevance score for a business result.
  *
- * Builds a Prisma WHERE clause from the SearchIntent fields,
- * combining category, city, price, service keywords, and search terms.
+ * Components (all normalized to [0, 1]):
+ *   - Average rating  × 0.40  — quality signal
+ *   - Booking count   × 0.30  — popularity signal (normalized against max)
+ *   - Service count   × 0.30  — breadth signal (normalized against max)
+ *
+ * @param business   - The business result to score
+ * @param maxBookings - Maximum booking count in the result set (for normalization)
+ * @param maxServices - Maximum service count in the result set (for normalization)
+ * @returns Composite score in [0, 1]
  */
+function computeRelevanceScore(
+  business: AISearchBusinessResult,
+  maxBookings: number,
+  maxServices: number
+): number {
+  const ratingScore =
+    business.averageRating !== null ? business.averageRating / 5 : 0;
+
+  const bookingScore =
+    maxBookings > 0 ? business._count.reviews / maxBookings : 0;
+
+  const serviceScore =
+    maxServices > 0 ? business._count.services / maxServices : 0;
+
+  return ratingScore * 0.4 + bookingScore * 0.3 + serviceScore * 0.3;
+}
+
+// =============================================================================
+// Query Builders
+// =============================================================================
+
 async function executeAIQuery(intent: SearchIntent) {
-  const where: Prisma.BusinessWhereInput = {
-    isActive: true,
-  };
+  const where: Prisma.BusinessWhereInput = { isActive: true };
 
   // Category filter
   if (intent.category) {
     where.category = intent.category as Prisma.EnumBusinessCategoryFilter;
   }
 
-  // City filter (case-insensitive partial match)
+  // City filter
   if (intent.city) {
     where.OR = [
       { city: { contains: intent.city, mode: "insensitive" } },
@@ -228,13 +214,12 @@ async function executeAIQuery(intent: SearchIntent) {
     ];
   }
 
-  // Service keyword filter — business must have a service matching keywords
+  // Service keyword + price filter
   if (intent.serviceKeywords && intent.serviceKeywords.length > 0) {
     where.services = {
       some: {
         isActive: true,
         AND: [
-          // Match at least one keyword in service name or description
           {
             OR: intent.serviceKeywords.map((keyword) => ({
               OR: [
@@ -248,13 +233,11 @@ async function executeAIQuery(intent: SearchIntent) {
               ],
             })),
           },
-          // Price filter — service must be under maxPrice
           ...(intent.maxPrice ? [{ price: { lte: intent.maxPrice } }] : []),
         ],
       },
     };
   } else if (intent.maxPrice) {
-    // Price filter without service keywords
     where.services = {
       some: {
         isActive: true,
@@ -263,9 +246,8 @@ async function executeAIQuery(intent: SearchIntent) {
     };
   }
 
-  // Search terms — match against business name and description
+  // Search terms
   if (intent.searchTerms && !intent.city) {
-    // Only add text search if city search isn't already using OR
     if (!where.OR) {
       where.OR = [
         { name: { contains: intent.searchTerms, mode: "insensitive" } },
@@ -278,8 +260,7 @@ async function executeAIQuery(intent: SearchIntent) {
       ];
     }
   } else if (intent.searchTerms && where.OR) {
-    // City is already using OR, add text search conditions to it
-    where.OR.push(
+    (where.OR as Prisma.BusinessWhereInput[]).push(
       { name: { contains: intent.searchTerms, mode: "insensitive" } },
       {
         description: {
@@ -290,7 +271,7 @@ async function executeAIQuery(intent: SearchIntent) {
     );
   }
 
-  // Day of week filter — business must be open on specified days
+  // Day of week filter
   if (intent.dayOfWeek && intent.dayOfWeek.length > 0) {
     where.BusinessHours = {
       some: {
@@ -300,62 +281,112 @@ async function executeAIQuery(intent: SearchIntent) {
     };
   }
 
-  // Execute the query
-  const [businesses, totalCount] = await Promise.all([
-    db.business.findMany({
-      where,
-      include: {
-        _count: {
-          select: {
-            services: { where: { isActive: true } },
-            reviews: true,
-          },
-        },
-        reviews: {
-          select: { rating: true },
-        },
-        services: {
-          where: { isActive: true },
-          select: {
-            name: true,
-            price: true,
-            duration: true,
-          },
-          take: 5,
-          orderBy: { price: "asc" },
+  // Fetch — always fetch with createdAt desc as the base order;
+  // post-fetch scoring reorders by relevance/rating/price
+  const rawBusinesses = await db.business.findMany({
+    where,
+    include: {
+      _count: {
+        select: {
+          services: { where: { isActive: true } },
+          reviews: true,
         },
       },
-      orderBy: { createdAt: "desc" },
-      take: MAX_AI_RESULTS,
-    }),
-    db.business.count({ where }),
-  ]);
+      reviews: {
+        select: { rating: true },
+      },
+      services: {
+        where: { isActive: true },
+        select: {
+          name: true,
+          price: true,
+          duration: true,
+        },
+        take: 5,
+        orderBy: { price: "asc" },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: MAX_AI_RESULTS * 3, // Fetch more than needed; scoring will trim
+  });
 
-  // Transform results
-  const serialized: AISearchBusinessResult[] = businesses.map((b) => ({
-    id: b.id,
-    slug: b.slug,
-    name: b.name,
-    description: b.description,
-    category: b.category,
-    city: b.city,
-    state: b.state,
-    image: b.image,
-    _count: b._count,
-    reviews: b.reviews,
-    matchingServices: b.services.map((s) => ({
-      name: s.name,
-      price: Number(s.price),
-      duration: s.duration,
-    })),
-  }));
+  // Compute average rating for each business
+  const withRatings: AISearchBusinessResult[] = rawBusinesses.map((b) => {
+    const totalRating = b.reviews.reduce((sum, r) => sum + r.rating, 0);
+    const averageRating =
+      b.reviews.length > 0
+        ? parseFloat((totalRating / b.reviews.length).toFixed(1))
+        : null;
 
-  return { businesses: serialized, totalCount };
+    return {
+      id: b.id,
+      slug: b.slug,
+      name: b.name,
+      description: b.description,
+      category: b.category,
+      city: b.city,
+      state: b.state,
+      image: b.image,
+      _count: b._count,
+      reviews: b.reviews,
+      averageRating,
+      matchingServices: b.services.map((s) => ({
+        name: s.name,
+        price: Number(s.price),
+        duration: s.duration,
+      })),
+    };
+  });
+
+  // Apply minRating filter post-fetch (Prisma aggregate filter is complex)
+  const filtered =
+    intent.minRating !== null && intent.minRating !== undefined
+      ? withRatings.filter(
+          (b) =>
+            b.averageRating !== null && b.averageRating >= intent.minRating!
+        )
+      : withRatings;
+
+  // Sort by intent
+  const sortBy = intent.sortBy ?? "relevance";
+  let sorted: AISearchBusinessResult[];
+
+  if (sortBy === "rating") {
+    // Highest average rating first; businesses with no reviews go last
+    sorted = [...filtered].sort((a, b) => {
+      if (a.averageRating === null && b.averageRating === null) return 0;
+      if (a.averageRating === null) return 1;
+      if (b.averageRating === null) return -1;
+      return b.averageRating - a.averageRating;
+    });
+  } else if (sortBy === "price") {
+    // Lowest minimum service price first
+    sorted = [...filtered].sort((a, b) => {
+      const aMin = a.matchingServices?.[0]?.price ?? Infinity;
+      const bMin = b.matchingServices?.[0]?.price ?? Infinity;
+      return aMin - bMin;
+    });
+  } else {
+    // Relevance — composite score
+    const maxBookings = Math.max(...filtered.map((b) => b._count.reviews), 1);
+    const maxServices = Math.max(...filtered.map((b) => b._count.services), 1);
+
+    sorted = [...filtered]
+      .map((b) => ({
+        ...b,
+        relevanceScore: computeRelevanceScore(b, maxBookings, maxServices),
+      }))
+      .sort((a, b) => (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0));
+  }
+
+  // Trim to MAX_AI_RESULTS after sorting
+  const trimmed = sorted.slice(0, MAX_AI_RESULTS);
+
+  return { businesses: trimmed, totalCount: filtered.length };
 }
 
 /**
  * Fallback basic text search when LLM extraction fails.
- * Matches query against business name, description, and service names.
  */
 async function executeBasicSearch(query: string) {
   const where: Prisma.BusinessWhereInput = {
@@ -374,7 +405,7 @@ async function executeBasicSearch(query: string) {
     ],
   };
 
-  const [businesses, totalCount] = await Promise.all([
+  const [rawBusinesses, totalCount] = await Promise.all([
     db.business.findMany({
       where,
       include: {
@@ -394,18 +425,27 @@ async function executeBasicSearch(query: string) {
     db.business.count({ where }),
   ]);
 
-  const serialized: AISearchBusinessResult[] = businesses.map((b) => ({
-    id: b.id,
-    slug: b.slug,
-    name: b.name,
-    description: b.description,
-    category: b.category,
-    city: b.city,
-    state: b.state,
-    image: b.image,
-    _count: b._count,
-    reviews: b.reviews,
-  }));
+  const businesses: AISearchBusinessResult[] = rawBusinesses.map((b) => {
+    const totalRating = b.reviews.reduce((sum, r) => sum + r.rating, 0);
+    const averageRating =
+      b.reviews.length > 0
+        ? parseFloat((totalRating / b.reviews.length).toFixed(1))
+        : null;
 
-  return { businesses: serialized, totalCount };
+    return {
+      id: b.id,
+      slug: b.slug,
+      name: b.name,
+      description: b.description,
+      category: b.category,
+      city: b.city,
+      state: b.state,
+      image: b.image,
+      _count: b._count,
+      reviews: b.reviews,
+      averageRating,
+    };
+  });
+
+  return { businesses, totalCount };
 }
