@@ -24,7 +24,8 @@
  *
  *   Business owner:
  *     NEW_BOOKING            — a new appointment has been booked
- *     BOOKING_CANCELLED      — a customer cancelled a paid booking
+ *     BOOKING_CANCELLED      — a customer/system cancelled a paid booking
+ *     BOOKING_EXPIRING_SOON  — a booking expiry warning for unpaid booking
  *     BOOKING_RESCHEDULED    — a customer rescheduled their appointment
  *     REVIEW_RECEIVED        — a customer left a review
  *     PAYOUT_PROCESSED       — a payout batch has been generated
@@ -52,6 +53,7 @@ export type NotificationType =
   // Customer notifications
   | "BOOKING_CONFIRMED"
   | "BOOKING_CANCELLED"
+  | "BOOKING_EXPIRING_SOON"
   | "BOOKING_RESCHEDULED"
   | "PAYMENT_REFUNDED"
   | "REVIEW_REPLY"

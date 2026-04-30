@@ -7,6 +7,11 @@
  *   - "customer" → cancellation from their perspective
  *   - "business" → cancellation notification for the owner
  *
+ * The `cancelledBy` prop controls the reason messaging:
+ *   - "customer"  → customer initiated the cancellation
+ *   - "business"  → business owner cancelled (reason box shown to customer)
+ *   - "system"    → automatic cancellation due to non-payment (auto-cancel cron)
+ *
  * When a business owner cancels a confirmed booking, the mandatory
  * cancellationReason is displayed in the customer-facing email so the
  * customer understands why their paid appointment was cancelled.
@@ -40,7 +45,8 @@ export interface BookingCancelledEmailProps {
   serviceTime: string;
   bookingId: string;
   ctaUrl: string;
-  cancelledBy: "customer" | "business";
+  /** Who or what triggered the cancellation. */
+  cancelledBy: "customer" | "business" | "system";
   /**
    * The reason provided by the business owner when cancelling a confirmed
    * booking. Only populated when cancelledBy === "business". Displayed
@@ -70,18 +76,66 @@ export function BookingCancelledEmail({
   const isCustomer = recipientType === "customer";
 
   const cancelledByLabel =
-    cancelledBy === "customer" ? "the customer" : "the business";
+    cancelledBy === "customer"
+      ? "the customer"
+      : cancelledBy === "business"
+        ? "the business"
+        : "the system"; // "system" — auto-cancel due to non-payment
 
   const ctaLabel = isCustomer ? "Browse Services" : "View Dashboard";
 
   /**
    * Show the cancellation reason box when:
    *   - The recipient is the customer (not the business view)
-   *   - The business cancelled (not the customer themselves)
+   *   - The business cancelled (not the customer or system)
    *   - A reason was actually provided
    */
   const showReason =
     isCustomer && cancelledBy === "business" && !!cancellationReason;
+
+  /**
+   * Show the non-payment explanation box when the system auto-cancelled.
+   * Only shown to customers — the business email has its own messaging.
+   */
+  const showNonPaymentNotice = isCustomer && cancelledBy === "system";
+
+  /**
+   * Hero paragraph — varies by who cancelled and who is reading.
+   */
+  function getHeroParagraph(): string {
+    if (!isCustomer) {
+      // Business owner view
+      if (cancelledBy === "system") {
+        return `Hi ${recipientName}, a booking at ${businessName} was automatically cancelled because payment was not received within 1 hour.`;
+      }
+      return `Hi ${recipientName}, a booking at ${businessName} has been cancelled by ${cancelledByLabel}.`;
+    }
+
+    // Customer view
+    if (cancelledBy === "system") {
+      return `Hi ${recipientName}, your booking at ${businessName} was automatically cancelled because payment was not completed within 1 hour of booking.`;
+    }
+    if (cancelledBy === "business") {
+      return `Hi ${recipientName}, your booking at ${businessName} has been cancelled by the business.`;
+    }
+    return `Hi ${recipientName}, your booking at ${businessName} has been cancelled.`;
+  }
+
+  /**
+   * Bottom message — actionable follow-up based on context.
+   */
+  function getMessageText(): string {
+    if (!isCustomer) {
+      return "The time slot is now available for new bookings.";
+    }
+    if (cancelledBy === "system") {
+      return "The time slot has been released. You can book a new appointment at any time — just make sure to complete payment promptly to secure your slot.";
+    }
+    if (cancelledBy === "business") {
+      return "We're sorry for the inconvenience. If you paid for this booking, a full refund will be processed within 3–5 business days. You can browse other available services and book a new appointment at any time.";
+    }
+    return "We're sorry about the cancellation. You can browse other available services and book a new appointment at any time.";
+  }
 
   return (
     <Html>
@@ -97,12 +151,7 @@ export function BookingCancelledEmail({
           <Section style={heroSection}>
             <Text style={heroEmoji}>❌</Text>
             <Text style={heroHeading}>Booking Cancelled</Text>
-            <Text style={heroParagraph}>
-              Hi {recipientName},{" "}
-              {isCustomer
-                ? `your booking at ${businessName} has been cancelled by ${cancelledByLabel}.`
-                : `a booking at ${businessName} has been cancelled by ${cancelledByLabel}.`}
-            </Text>
+            <Text style={heroParagraph}>{getHeroParagraph()}</Text>
           </Section>
 
           {/* Cancelled Booking Details */}
@@ -137,6 +186,20 @@ export function BookingCancelledEmail({
             </Row>
           </Section>
 
+          {/* Non-payment notice — shown to customer when system auto-cancelled */}
+          {showNonPaymentNotice && (
+            <Section style={nonPaymentSection}>
+              <Text style={nonPaymentText}>
+                ⏰ <strong>Why was my booking cancelled?</strong>
+                {"\n\n"}
+                Bookings must be paid within <strong>1 hour</strong> of creation
+                to hold the time slot. Because payment was not received in time,
+                your slot was automatically released so other customers could
+                book it.
+              </Text>
+            </Section>
+          )}
+
           {/* Cancellation reason — shown to customer when business cancels */}
           {showReason && (
             <Section style={reasonSection}>
@@ -147,13 +210,7 @@ export function BookingCancelledEmail({
 
           {/* Message */}
           <Section style={messageSection}>
-            <Text style={messageText}>
-              {isCustomer
-                ? cancelledBy === "business"
-                  ? "We're sorry for the inconvenience. If you paid for this booking, a full refund will be processed within 3–5 business days. You can browse other available services and book a new appointment at any time."
-                  : "We're sorry about the cancellation. You can browse other available services and book a new appointment at any time."
-                : "The time slot is now available for new bookings."}
-            </Text>
+            <Text style={messageText}>{getMessageText()}</Text>
           </Section>
 
           {/* CTA */}
@@ -190,7 +247,7 @@ export async function renderBookingCancelledEmail(
 }
 
 // =============================================================================
-// Styles
+// Styles — all identical to original
 // =============================================================================
 
 const body: React.CSSProperties = {
@@ -273,7 +330,23 @@ const detailDivider: React.CSSProperties = {
   margin: "4px 0",
 };
 
-/** Reason box — amber background, sits between the details card and the message */
+/** Non-payment explanation — blue info box for system auto-cancellations */
+const nonPaymentSection: React.CSSProperties = {
+  margin: "16px 32px 0",
+  padding: "16px",
+  backgroundColor: "#eff6ff",
+  borderRadius: "8px",
+  border: "1px solid #bfdbfe",
+};
+const nonPaymentText: React.CSSProperties = {
+  fontSize: "14px",
+  color: "#1e40af",
+  lineHeight: "22px",
+  margin: 0,
+  whiteSpace: "pre-line" as const,
+};
+
+/** Reason box — amber background for business-initiated cancellations */
 const reasonSection: React.CSSProperties = {
   margin: "16px 32px 0",
   padding: "16px",
@@ -296,7 +369,6 @@ const reasonText: React.CSSProperties = {
   margin: 0,
   fontStyle: "italic",
 };
-
 const messageSection: React.CSSProperties = {
   padding: "24px 32px 0",
 };

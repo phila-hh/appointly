@@ -320,7 +320,7 @@ export async function sendBookingReminderEmail(
  */
 export async function sendBookingCancelledEmails(
   bookingId: string,
-  cancelledBy: "customer" | "business",
+  cancelledBy: "customer" | "business" | "system",
   reason?: string
 ): Promise<void> {
   try {

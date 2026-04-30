@@ -1,7 +1,7 @@
 /**
  * @file Auto-Cancel Cron Job
  * @description Scheduled API route that automatically cancels unpaid bookings
- * after 1 hour and sends a 15-minute warning email before cancellation.
+ * after 1 hour and sends a 15-minute warning before cancellation.
  *
  * Triggered by Vercel Cron every 5 minutes (configured in vercel.json).
  * Can also be triggered manually with the correct Authorization header.
@@ -12,8 +12,8 @@
  *     Find PENDING bookings where:
  *       - payment.status != "SUCCEEDED" (not paid)
  *       - createdAt <= now - 60 minutes (past the 1-hour window)
- *     Action: cancel booking, create in-app notification for customer,
- *             revalidate affected paths
+ *     Action: cancel booking, send cancellation email (cancelledBy: "system"),
+ *             create BOOKING_CANCELLED in-app notification, revalidate paths
  *
  *   Pass 2 — Expiry warning:
  *     Find PENDING bookings where:
@@ -21,32 +21,33 @@
  *       - createdAt <= now - 45 minutes (15 minutes before auto-cancel)
  *       - createdAt > now - 60 minutes (not yet in the cancel window)
  *       - warningEmailSentAt IS NULL (warning not yet sent)
- *     Action: send expiring-soon email, set warningEmailSentAt = now()
+ *     Action: send expiring-soon email, create BOOKING_EXPIRING_SOON
+ *             in-app notification, set warningEmailSentAt = now()
  *
  *   Pass 3 — Notification cleanup:
  *     Delete all notifications older than 30 days.
- *     Piggybacked on this cron to avoid a separate scheduled job.
  *
  * Security:
  *   - Requests must include Authorization: Bearer ${CRON_SECRET}
  *   - Vercel automatically sends this header from its cron infrastructure
  *
  * Idempotency:
- *   - Auto-cancel: PENDING → CANCELLED transition is idempotent (already-
- *     cancelled bookings are excluded by the status filter)
- *   - Warning email: warningEmailSentAt flag prevents duplicate sends even
- *     if the cron runs twice within the same 5-minute window
+ *   - Auto-cancel: status filter excludes already-cancelled bookings
+ *   - Warning: warningEmailSentAt flag prevents duplicate sends
  *
  * @see https://vercel.com/docs/cron-jobs
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { subMinutes, subDays } from "date-fns";
+import { revalidatePath } from "next/cache";
 
 import db from "@/lib/db";
-import { sendBookingExpiringSoonEmail } from "@/lib/email-service";
+import {
+  sendBookingExpiringSoonEmail,
+  sendBookingCancelledEmails,
+} from "@/lib/email-service";
 import { createNotification } from "@/lib/actions/notification";
-import { revalidatePath } from "next/cache";
 
 // =============================================================================
 // Route Handler
@@ -82,10 +83,6 @@ export async function GET(request: NextRequest) {
   // Pass 1: Auto-cancel bookings older than 60 minutes
   // -------------------------------------------------------------------------
 
-  /**
-   * The auto-cancel threshold: bookings created more than 60 minutes ago
-   * that still have not been paid are cancelled automatically.
-   */
   const cancelThreshold = subMinutes(now, 60);
 
   const bookingsToCancel = await db.booking.findMany({
@@ -100,7 +97,10 @@ export async function GET(request: NextRequest) {
       id: true,
       customerId: true,
       business: {
-        select: { name: true },
+        select: {
+          ownerId: true,
+          name: true,
+        },
       },
       service: {
         select: { name: true },
@@ -121,7 +121,8 @@ export async function GET(request: NextRequest) {
         data: { status: "CANCELLED" },
       });
 
-      // In-app notification — customer needs to know their slot was released
+      // In-app notification — customer (they may be offline but will
+      // see this when they next open the app)
       await createNotification({
         userId: booking.customerId,
         type: "BOOKING_CANCELLED",
@@ -130,10 +131,20 @@ export async function GET(request: NextRequest) {
         link: `/bookings/${booking.id}`,
       });
 
+      // Email — primary communication channel for offline users.
+      // Fire-and-forget so one failed email does not block other cancellations.
+      sendBookingCancelledEmails(booking.id, "system").catch((err) => {
+        console.error(
+          `   ❌ Auto-cancel email failed for booking ${booking.id}:`,
+          err
+        );
+      });
+
       cancelResults.cancelled++;
 
       console.log(
-        `   ✅ Auto-cancelled booking ${booking.id} (payment not received within 1 hour).`
+        `   ✅ Auto-cancelled booking ${booking.id} ` +
+          `(payment not received within 1 hour).`
       );
     } catch (error) {
       cancelResults.failed++;
@@ -144,24 +155,16 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Revalidate booking pages once after all cancellations (batch revalidation)
+  // Revalidate booking pages once after all cancellations
   if (cancelResults.cancelled > 0) {
     revalidatePath("/bookings");
     revalidatePath("/dashboard/bookings");
   }
 
   // -------------------------------------------------------------------------
-  // Pass 2: Send 15-minute warning emails (bookings 45–60 minutes old)
+  // Pass 2: Send 15-minute warning (bookings 45–60 minutes old, unpaid)
   // -------------------------------------------------------------------------
 
-  /**
-   * Warning window: bookings created between 45 and 60 minutes ago.
-   *   - lte warningThreshold  → at least 45 minutes old
-   *   - gt  cancelThreshold   → not yet past the 60-minute cancel point
-   *
-   * The warningEmailSentAt IS NULL guard ensures we send each warning
-   * exactly once, even if the cron runs multiple times within the window.
-   */
   const warningThreshold = subMinutes(now, 45);
 
   const bookingsToWarn = await db.booking.findMany({
@@ -178,6 +181,13 @@ export async function GET(request: NextRequest) {
     },
     select: {
       id: true,
+      customerId: true,
+      business: {
+        select: { name: true },
+      },
+      service: {
+        select: { name: true },
+      },
     },
   });
 
@@ -189,10 +199,19 @@ export async function GET(request: NextRequest) {
 
   for (const booking of bookingsToWarn) {
     try {
-      // Send the urgency email
+      // Email — reaches the customer even if they are not in the app
       await sendBookingExpiringSoonEmail(booking.id);
 
-      // Mark warning as sent — prevents duplicate emails on subsequent runs
+      // In-app notification — reaches them if they are still browsing
+      await createNotification({
+        userId: booking.customerId,
+        type: "BOOKING_EXPIRING_SOON",
+        title: "Complete Payment — Slot Expiring",
+        message: `Your ${booking.service.name} booking at ${booking.business.name} will be automatically cancelled in ~15 minutes. Pay now to secure your slot.`,
+        link: `/bookings/${booking.id}`,
+      });
+
+      // Mark warning as sent — prevents duplicate sends on subsequent runs
       await db.booking.update({
         where: { id: booking.id },
         data: { warningEmailSentAt: now },
@@ -215,7 +234,6 @@ export async function GET(request: NextRequest) {
   // -------------------------------------------------------------------------
 
   const notificationCutoff = subDays(now, 30);
-
   let deletedNotificationCount = 0;
 
   try {
