@@ -1,5 +1,6 @@
 /**
  * @file Seed bookings.
+ * Updated: adds `rescheduleCount` and `warningEmailSentAt` fields.
  *
  * Date window: 2025-07-01 → 2026-06-30
  *
@@ -21,6 +22,7 @@ export interface SeededBooking {
   serviceId: string;
   staffId: string | null;
   status: BookingStatus;
+  startTime: string;
   totalPrice: number;
   date: Date;
   isDemo: boolean;
@@ -30,7 +32,7 @@ export interface SeededBooking {
 const WINDOW_DATES: Date[] = [];
 for (let m = 0; m < 12; m++) {
   const year = m < 6 ? 2025 : 2026;
-  const month = m < 6 ? 7 + m : 1 + (m - 6); // Jul2025..Dec2025, Jan2026..Jun2026
+  const month = m < 6 ? 7 + m : 1 + (m - 6);
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   for (let day = 1; day <= daysInMonth; day++) {
     WINDOW_DATES.push(d(year, month, day));
@@ -40,7 +42,7 @@ for (let m = 0; m < 12; m++) {
 const NOTES = [
   null,
   null,
-  null, // most bookings have no notes
+  null,
   "First time visit. Looking forward to it!",
   "Please be gentle, I have sensitive skin.",
   "Referred by a friend. Excited to try your services.",
@@ -51,7 +53,7 @@ const NOTES = [
   "Allergic to latex — will discuss on arrival.",
   "Same style as last time please.",
   "Please use organic products only.",
-  "ውድ ስራ ነው! ደስ ይለኛል — excited!",
+  "ብጹሕ ሕጉስ ኢኹም! ሕልናዊ ስራሕ — excited to visit!",
   "Emergency booking. Really need this today.",
   "Can I bring my friend along to watch?",
   "Repeat customer — please note I prefer the corner seat.",
@@ -65,13 +67,11 @@ function statusForDate(date: Date, i: number): BookingStatus {
   const now = new Date();
   const isPast = date < now;
   if (isPast) {
-    // Past bookings: mostly COMPLETED, some CANCELLED, some NO_SHOW
     const r = i % 10;
     if (r < 7) return "COMPLETED";
     if (r < 9) return "CANCELLED";
     return "NO_SHOW";
   } else {
-    // Future bookings: CONFIRMED, PENDING, CANCELLED
     const r = i % 10;
     if (r < 5) return "CONFIRMED";
     if (r < 8) return "PENDING";
@@ -93,6 +93,9 @@ interface BookingRow {
   isCancellable: boolean;
   cancellationFee: number;
   cancellationDeadline: Date | null;
+  rescheduleCount: number;
+  warningEmailSentAt: Date | null;
+  isDemo: boolean;
 }
 
 export async function seedBookings(
@@ -105,7 +108,7 @@ export async function seedBookings(
   const prisma = getPrisma();
   console.log("📅 Creating bookings...");
 
-  const rows: (BookingRow & { isDemo: boolean })[] = [];
+  const rows: BookingRow[] = [];
 
   const svcFor = (bizId: string) =>
     services.filter((s) => s.businessId === bizId && s.isActive);
@@ -118,6 +121,46 @@ export async function seedBookings(
     return s.length > 0 ? pick(s).id : null;
   };
 
+  // ---------------------------------------------------------------------------
+  // Helpers for the new fields
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Rescheduled bookings: ~15% of CONFIRMED/PENDING bookings get a
+   * rescheduleCount of 1–3. A handful get rescheduleCount of 0 (most).
+   */
+  function rescheduleCountFor(status: BookingStatus, i: number): number {
+    if (!["CONFIRMED", "PENDING", "COMPLETED"].includes(status)) return 0;
+    if (i % 7 === 0) return 3; // heavily rescheduled (edge case)
+    if (i % 5 === 0) return 2;
+    if (i % 3 === 0) return 1;
+    return 0;
+  }
+
+  /**
+   * warningEmailSentAt — set only for PENDING bookings that are approaching
+   * their cancellation deadline (to simulate the warning email was sent).
+   * Also set for some CONFIRMED bookings that were previously pending.
+   */
+  function warningEmailSentAtFor(
+    status: BookingStatus,
+    date: Date,
+    i: number
+  ): Date | null {
+    if (status === "PENDING" && i % 4 === 0) {
+      // Simulate warning sent 2 days before the booking date
+      const warnDate = new Date(date);
+      warnDate.setUTCDate(warnDate.getUTCDate() - 2);
+      return warnDate;
+    }
+    if (status === "CONFIRMED" && i % 8 === 0) {
+      const warnDate = new Date(date);
+      warnDate.setUTCDate(warnDate.getUTCDate() - 3);
+      return warnDate;
+    }
+    return null;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // DEMO businesses — 90 bookings each, maximally varied
   // ─────────────────────────────────────────────────────────────────────────
@@ -126,7 +169,6 @@ export async function seedBookings(
     const svcs = svcFor(biz.id);
     if (svcs.length === 0) continue;
 
-    // 90 dates spread evenly across the 12-month window
     const step = Math.floor(WINDOW_DATES.length / 90);
     for (let i = 0; i < 90; i++) {
       const dateIdx = (i * step + bi * 30) % WINDOW_DATES.length;
@@ -137,7 +179,6 @@ export async function seedBookings(
       const status = statusForDate(date, i);
       const note = noteFor(i);
 
-      // Rotate through all customers — demo customers get ~30% share
       let custId: string;
       if (i % 3 === 0) {
         custId = demoCustomerIds[i % demoCustomerIds.length];
@@ -159,18 +200,21 @@ export async function seedBookings(
         status,
         notes: note,
         totalPrice: svc.price,
-        isCancellable: i % 15 !== 0, // edge: some non-cancellable
+        isCancellable: i % 15 !== 0,
         cancellationFee: i % 7 === 0 ? 100 : 0,
         cancellationDeadline: ["CONFIRMED", "PENDING"].includes(status)
           ? cancDl
           : null,
+        rescheduleCount: rescheduleCountFor(status, i),
+        warningEmailSentAt: warningEmailSentAtFor(status, date, i),
         isDemo: true,
       });
     }
   }
 
-  // Extra bookings for demo customers at DEMO businesses (high activity demo customers)
-  // James Wilson — 40 extra bookings across all 3 demo businesses
+  // ── Extra bookings for demo customers at DEMO businesses ─────────────────
+
+  // Bereket Gebremedhin — 40 extra bookings across all 3 demo businesses
   for (let i = 0; i < 40; i++) {
     const bizIdx = i % 3;
     const biz = businesses[bizIdx];
@@ -181,6 +225,7 @@ export async function seedBookings(
     const svc = svcs[i % svcs.length];
     const startTime = TIME_SLOTS[(i + 4) % TIME_SLOTS.length];
     const status = statusForDate(date, i + 3);
+
     rows.push({
       customerId: demoCustomerIds[0],
       businessId: biz.id,
@@ -195,11 +240,13 @@ export async function seedBookings(
       isCancellable: true,
       cancellationFee: 0,
       cancellationDeadline: null,
+      rescheduleCount: rescheduleCountFor(status, i + 10),
+      warningEmailSentAt: warningEmailSentAtFor(status, date, i + 10),
       isDemo: true,
     });
   }
 
-  // Sarah Chen — 35 extra bookings mostly at Spa and Salon businesses
+  // Semhar Tekleab — 35 extra bookings (spa & salon focus)
   for (let i = 0; i < 35; i++) {
     const bizIdx =
       i % 2 === 0 ? 1 : Math.min(5 + (i % 4), businesses.length - 1);
@@ -211,6 +258,7 @@ export async function seedBookings(
     const svc = svcs[i % svcs.length];
     const startTime = TIME_SLOTS[(i + 6) % TIME_SLOTS.length];
     const status = statusForDate(date, i + 1);
+
     rows.push({
       customerId: demoCustomerIds[1],
       businessId: biz.id,
@@ -225,11 +273,13 @@ export async function seedBookings(
       isCancellable: i % 10 !== 0,
       cancellationFee: i % 5 === 0 ? 200 : 0,
       cancellationDeadline: null,
+      rescheduleCount: rescheduleCountFor(status, i + 5),
+      warningEmailSentAt: warningEmailSentAtFor(status, date, i + 5),
       isDemo: true,
     });
   }
 
-  // David Kim — 35 extra bookings heavy on Fitness and Barbershop
+  // Yonas Hagos — 35 extra bookings (fitness & barbershop focus)
   for (let i = 0; i < 35; i++) {
     const bizIdx =
       i % 2 === 0
@@ -245,6 +295,7 @@ export async function seedBookings(
     const svc = svcs[i % svcs.length];
     const startTime = TIME_SLOTS[(i + 2) % TIME_SLOTS.length];
     const status = statusForDate(date, i + 2);
+
     rows.push({
       customerId: demoCustomerIds[2],
       businessId: biz.id,
@@ -259,6 +310,8 @@ export async function seedBookings(
       isCancellable: true,
       cancellationFee: 0,
       cancellationDeadline: null,
+      rescheduleCount: rescheduleCountFor(status, i),
+      warningEmailSentAt: warningEmailSentAtFor(status, date, i),
       isDemo: true,
     });
   }
@@ -271,7 +324,7 @@ export async function seedBookings(
     const svcs = svcFor(biz.id);
     if (svcs.length === 0) continue;
 
-    const count = 10 + (bi % 9); // 10-18
+    const count = 10 + (bi % 9);
     for (let i = 0; i < count; i++) {
       const dateIdx = (bi * 7 + i * 13) % WINDOW_DATES.length;
       const date = WINDOW_DATES[dateIdx];
@@ -294,6 +347,8 @@ export async function seedBookings(
         isCancellable: true,
         cancellationFee: 0,
         cancellationDeadline: null,
+        rescheduleCount: rescheduleCountFor(status, bi + i),
+        warningEmailSentAt: warningEmailSentAtFor(status, date, bi + i),
         isDemo: false,
       });
     }
@@ -320,6 +375,8 @@ export async function seedBookings(
           isCancellable: row.isCancellable,
           cancellationFee: row.cancellationFee,
           cancellationDeadline: row.cancellationDeadline,
+          rescheduleCount: row.rescheduleCount,
+          warningEmailSentAt: row.warningEmailSentAt,
         },
       });
       seeded.push({
@@ -330,11 +387,12 @@ export async function seedBookings(
         staffId: b.staffId,
         status: b.status as BookingStatus,
         totalPrice: Number(b.totalPrice),
+        startTime: b.startTime,
         date: b.date,
         isDemo: row.isDemo,
       });
     } catch {
-      // skip
+      // skip duplicates / conflicts silently
     }
   }
 

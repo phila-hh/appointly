@@ -329,6 +329,7 @@ export function AISearchBar({ isAuthenticated }: AISearchBarProps) {
                         image: business.image,
                         _count: business._count,
                         reviews: business.reviews,
+                        averageRating: business.averageRating,
                       }}
                     />
                   ))}

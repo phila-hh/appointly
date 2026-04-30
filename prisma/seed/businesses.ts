@@ -1,13 +1,14 @@
 /**
- * @file Seed businesses — localized.
+ * @file Seed businesses — Tigray-localized.
+ * Updated: adds `announcement` and `announcementExpiresAt` fields.
  *
  * Index 0,1,2 are DEMO businesses (owned by demoOwners[0,1,2]):
- *   0 → Habesha Cuts Barbershop  (BARBERSHOP)  — Mekelle
- *   1 → Axum Wellness Spa        (SPA)          — Mekelle
- *   2 → Tigray Fitness Hub       (FITNESS)      — Mekelle
+ *   0 → Habesha Cuts Barbershop  (BARBERSHOP) — Mekelle
+ *   1 → Axum Wellness Spa        (SPA)         — Mekelle
+ *   2 → Tigray Fitness Hub       (FITNESS)     — Mekelle
  */
 
-import { getPrisma, slugify } from "./helpers";
+import { getPrisma, slugify, d } from "./helpers";
 import type { SeededUsers } from "./users";
 import { BusinessCategory } from "@/generated/prisma/client";
 
@@ -38,9 +39,18 @@ export async function seedBusinesses(
     state: string;
     zipCode: string;
     isActive?: boolean;
+    announcement?: string;
+    announcementExpiresAt?: Date;
   };
 
   const S = "Tigray";
+
+  // Future dates for announcements
+  const future30 = d(2026, 7, 30);
+  const future60 = d(2026, 8, 30);
+  const future14 = d(2026, 7, 14);
+  const future7 = d(2026, 7, 7);
+  const past = d(2026, 6, 1); // expired announcement edge case
 
   const allDefs: BizDef[] = [
     // ── DEMO 0: Habesha Cuts Barbershop ───────────────────────────────────
@@ -56,6 +66,9 @@ export async function seedBusinesses(
       city: "Mekelle",
       state: S,
       zipCode: "7100",
+      announcement:
+        "🎉 Grand Summer Sale! Get 20% off all services every Tuesday and Wednesday throughout July. Book now to secure your spot!",
+      announcementExpiresAt: future30,
     },
     // ── DEMO 1: Axum Wellness Spa ─────────────────────────────────────────
     {
@@ -70,6 +83,9 @@ export async function seedBusinesses(
       city: "Mekelle",
       state: S,
       zipCode: "7100",
+      announcement:
+        "✨ New treatment alert! Our signature Ethiopian Honey & Rose body wrap is now available. Limited slots — book yours today before they fill up!",
+      announcementExpiresAt: future60,
     },
     // ── DEMO 2: Tigray Fitness Hub ────────────────────────────────────────
     {
@@ -84,9 +100,12 @@ export async function seedBusinesses(
       city: "Mekelle",
       state: S,
       zipCode: "7100",
+      announcement:
+        "💪 Ramadan hours in effect. We open at 16:00 and close at 23:00 throughout the holy month. Free nutrition consultation with every new membership!",
+      announcementExpiresAt: future14,
     },
 
-    // ── Regular businesses (52, indexes 3–54) ──────────────────────────────
+    // ── Regular businesses (52, indexes 3–54) ─────────────────────────────
     // BARBERSHOP
     {
       name: "Adwa Mens Grooming",
@@ -100,6 +119,9 @@ export async function seedBusinesses(
       city: "Adwa",
       state: S,
       zipCode: "7200",
+      announcement:
+        "New walk-in hours! We now accept walk-ins until 20:00 on weekdays.",
+      announcementExpiresAt: future7,
     },
     {
       name: "Kings Barbershop Axum",
@@ -140,6 +162,9 @@ export async function seedBusinesses(
       city: "Mekelle",
       state: S,
       zipCode: "7100",
+      announcement:
+        "Bridal season special! Book your full bridal package before the end of the month and get a complimentary eyebrow threading session.",
+      announcementExpiresAt: future30,
     },
     {
       name: "Genet Hair Studio",
@@ -193,6 +218,9 @@ export async function seedBusinesses(
       city: "Mekelle",
       state: S,
       zipCode: "7100",
+      announcement:
+        "Weekday serenity deal: Book any 60-minute massage Monday–Thursday and receive a complimentary express facial. Valid this month only.",
+      announcementExpiresAt: future30,
     },
     {
       name: "Blue Nile Day Spa Shire",
@@ -233,6 +261,9 @@ export async function seedBusinesses(
       city: "Mekelle",
       state: S,
       zipCode: "7100",
+      announcement:
+        "New 5:30 AM early-bird CrossFit class starting this Monday! Limited to 12 athletes. Book your spot now before it fills up.",
+      announcementExpiresAt: future14,
     },
     {
       name: "Yoga Tigray Studio",
@@ -273,6 +304,9 @@ export async function seedBusinesses(
       city: "Mekelle",
       state: S,
       zipCode: "7100",
+      announcement:
+        "Free dental check-up week! Walk in any day this week for a complimentary basic check-up. No appointment needed. Spaces are limited.",
+      announcementExpiresAt: future7,
     },
     {
       name: "Bright Smile Dental Axum",
@@ -366,6 +400,9 @@ export async function seedBusinesses(
       city: "Mekelle",
       state: S,
       zipCode: "7100",
+      announcement:
+        "Summer intensive program now enrolling! 6-week crash course covering all university entrance exam subjects. Register before spots run out.",
+      announcementExpiresAt: future30,
     },
     {
       name: "Bright Minds Mekelle",
@@ -445,6 +482,9 @@ export async function seedBusinesses(
       city: "Mekelle",
       state: S,
       zipCode: "7100",
+      announcement:
+        "Free 30-minute IT audit for new clients this month only. Discover security gaps and optimization opportunities at no cost.",
+      announcementExpiresAt: future30,
     },
     {
       name: "Green Tigray Consulting",
@@ -485,6 +525,9 @@ export async function seedBusinesses(
       city: "Axum",
       state: S,
       zipCode: "7210",
+      announcement:
+        "Ashenda festival packages now available! Special group and individual photo sessions celebrating Tigray's beloved women's festival.",
+      announcementExpiresAt: future60,
     },
     {
       name: "Adigrat Photo Studio",
@@ -698,7 +741,7 @@ export async function seedBusinesses(
       state: S,
       zipCode: "7100",
     },
-    // Extra to fill out to 52 regular
+    // Extra
     {
       name: "Enticho Classic Cuts",
       category: "BARBERSHOP",
@@ -738,6 +781,10 @@ export async function seedBusinesses(
       state: S,
       zipCode: "7800",
       isActive: false,
+      // Expired announcement — edge case for testing
+      announcement:
+        "We are currently undergoing renovation. Expected to reopen in August 2026. Thank you for your patience!",
+      announcementExpiresAt: past,
     },
     {
       name: "Maychew Power Gym",
@@ -787,6 +834,8 @@ export async function seedBusinesses(
         state: def.state,
         zipCode: def.zipCode,
         isActive: def.isActive !== undefined ? def.isActive : true,
+        announcement: def.announcement ?? null,
+        announcementExpiresAt: def.announcementExpiresAt ?? null,
       },
     });
     results.push({

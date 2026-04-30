@@ -1,10 +1,11 @@
 /**
- * @file Seed reviews with sentiment data.
+ * @file Seed reviews with sentiment data and business replies.
+ * Updated: adds `businessReply` and `businessReplyAt` fields.
  *
  * ~70% of COMPLETED bookings get reviews.
  * Demo businesses and demo customers get 100% review coverage.
  * Ratings distribution: 5★ 40%, 4★ 30%, 3★ 15%, 2★ 10%, 1★ 5%
- * All reviews include AI-generated sentiment fields.
+ * Business replies are added to ~50% of reviews (higher on demo businesses).
  */
 
 import { getPrisma } from "./helpers";
@@ -31,14 +32,14 @@ const TEMPLATES: ReviewTemplate[] = [
     sentimentLabel: "positive",
     sentimentScore: 0.97,
     comment:
-      "Best service in Addis Ababa. Highly recommend to everyone! Worth every birr spent.",
+      "Best service in Mekelle. Highly recommend to everyone! Worth every birr spent.",
   },
   {
     rating: 5,
     sentimentLabel: "positive",
     sentimentScore: 0.99,
     comment:
-      "ድንቅ አገልግሎት! በጣም ደስ ብሎኛል። The whole team was warm, welcoming, and incredibly skilled.",
+      "ፍፁም ዝበለጸ ኣገልግሎት! The whole team was warm, welcoming, and incredibly skilled.",
   },
   {
     rating: 5,
@@ -66,7 +67,7 @@ const TEMPLATES: ReviewTemplate[] = [
     sentimentLabel: "positive",
     sentimentScore: 0.97,
     comment:
-      "I've tried many places in Addis but this is hands down the absolute best. Never going anywhere else!",
+      "I've tried many places in Tigray but this is hands down the absolute best. Never going anywhere else!",
   },
   {
     rating: 5,
@@ -284,14 +285,56 @@ const TEMPLATES: ReviewTemplate[] = [
   },
 ];
 
+// Business reply templates keyed by rating group
+const REPLIES: Record<"positive" | "neutral" | "negative", string[]> = {
+  positive: [
+    "Thank you so much for your kind words! We truly appreciate your loyalty and look forward to serving you again very soon.",
+    "We are so glad you had a wonderful experience! Your satisfaction is our greatest reward. See you next time! 🙏",
+    "This made our whole team smile! Thank you for taking the time to share your experience. You are always welcome here.",
+    "Wow, thank you! Reviews like yours keep us motivated to give our very best every single day. We can't wait to see you again!",
+    "We deeply appreciate your lovely feedback. It is customers like you that make what we do so rewarding. Thank you!",
+  ],
+  neutral: [
+    "Thank you for your honest feedback. We hear you on the wait time and are actively working to improve our scheduling. We hope to do better next time!",
+    "We appreciate you taking the time to share your thoughts. Your feedback helps us grow. We would love to have you back and exceed your expectations.",
+    "Thank you for visiting us. We are sorry the experience was not quite what you hoped for. Please reach out to us directly so we can make it right.",
+    "We value your honest review. We are constantly working on improving our facilities and service flow. We hope you'll give us another chance!",
+  ],
+  negative: [
+    "We sincerely apologize for your experience. This is not the standard we hold ourselves to. Please contact us directly so we can resolve this for you right away.",
+    "We are very sorry to hear this. Your feedback has been shared with our management team and we are taking immediate action. We hope you will give us an opportunity to make it right.",
+    "We deeply apologize for falling short of your expectations. Please reach out to us at our email so we can address your concerns personally and offer a remedy.",
+    "This is not acceptable and we are truly sorry. We take all feedback seriously. Please contact us directly and we will do everything we can to make this right.",
+  ],
+};
+
 function pickTemplate(i: number): ReviewTemplate {
   // Distribution: 5★ 40%, 4★ 30%, 3★ 15%, 2★ 10%, 1★ 5%
   const r = i % 20;
-  if (r < 8) return TEMPLATES[i % 10]; // 5-star (indices 0-9)
-  if (r < 14) return TEMPLATES[10 + (i % 10)]; // 4-star (indices 10-19)
-  if (r < 17) return TEMPLATES[20 + (i % 8)]; // 3-star (indices 20-27)
-  if (r < 19) return TEMPLATES[28 + (i % 5)]; // 2-star (indices 28-32)
-  return TEMPLATES[33 + (i % 4)]; // 1-star (indices 33-36)
+  if (r < 8) return TEMPLATES[i % 10]; // 5-star (0-9)
+  if (r < 14) return TEMPLATES[10 + (i % 10)]; // 4-star (10-19)
+  if (r < 17) return TEMPLATES[20 + (i % 8)]; // 3-star (20-27)
+  if (r < 19) return TEMPLATES[28 + (i % 5)]; // 2-star (28-32)
+  return TEMPLATES[33 + (i % 4)]; // 1-star (33-36)
+}
+
+function pickReply(
+  sentimentLabel: "positive" | "neutral" | "negative",
+  i: number
+): string {
+  const pool = REPLIES[sentimentLabel];
+  return pool[i % pool.length];
+}
+
+/**
+ * Determine reply date: a few days after the review would have been created.
+ * Reviews are created at seed time, so we approximate reply dates relative
+ * to the booking date.
+ */
+function replyDateFor(bookingDate: Date, i: number): Date {
+  const reply = new Date(bookingDate);
+  reply.setUTCDate(reply.getUTCDate() + 2 + (i % 5)); // 2–6 days after booking
+  return reply;
 }
 
 export async function seedReviews(bookings: SeededBooking[]): Promise<void> {
@@ -304,12 +347,33 @@ export async function seedReviews(bookings: SeededBooking[]): Promise<void> {
   for (let i = 0; i < completedBookings.length; i++) {
     const booking = completedBookings[i];
 
-    // Demo businesses and demo customers get 100% reviews
-    // Regular get ~70%
+    // Demo businesses and demo customers → 100% coverage
+    // Regular → ~70%
     const shouldReview = booking.isDemo || i % 10 < 7;
     if (!shouldReview) continue;
 
     const tmpl = pickTemplate(i);
+
+    // Business reply logic:
+    //   - Demo businesses: ~80% of reviews get a reply
+    //   - Regular businesses: ~40% of reviews get a reply
+    //   - Negative reviews (1-2 star) always get a reply from demo businesses
+    const isDemoBiz = booking.isDemo;
+    const isNegative = tmpl.rating <= 2;
+    const isPositive = tmpl.rating >= 4;
+
+    let shouldReply: boolean;
+    if (isDemoBiz) {
+      shouldReply = isNegative || i % 5 !== 0; // ~80%
+    } else {
+      shouldReply = isPositive && i % 3 === 0; // ~40% of positives
+    }
+
+    const businessReply = shouldReply
+      ? pickReply(tmpl.sentimentLabel, i)
+      : null;
+
+    const businessReplyAt = shouldReply ? replyDateFor(booking.date, i) : null;
 
     try {
       await prisma.review.create({
@@ -321,6 +385,8 @@ export async function seedReviews(bookings: SeededBooking[]): Promise<void> {
           comment: tmpl.comment,
           sentimentLabel: tmpl.sentimentLabel,
           sentimentScore: tmpl.sentimentScore,
+          businessReply,
+          businessReplyAt,
         },
       });
       count++;

@@ -199,57 +199,86 @@ function computeRelevanceScore(
 // =============================================================================
 
 async function executeAIQuery(intent: SearchIntent) {
-  const where: Prisma.BusinessWhereInput = { isActive: true };
+  // -------------------------------------------------------------------------
+  // Build WHERE clause
+  //
+  // Architecture:
+  //   - Top-level AND array collects all mandatory conditions
+  //   - City filter is its own AND condition (hard exclusion of other cities)
+  //   - Search terms are their own OR condition (soft matching)
+  //   - They never share an OR array, preventing city/term cross-contamination
+  // -------------------------------------------------------------------------
 
-  // Category filter
+  const andConditions: Prisma.BusinessWhereInput[] = [{ isActive: true }];
+
+  // -------------------------------------------------------------------------
+  // Category filter — hard match on enum
+  // -------------------------------------------------------------------------
   if (intent.category) {
-    where.category = intent.category as Prisma.EnumBusinessCategoryFilter;
+    andConditions.push({
+      category: intent.category as Prisma.EnumBusinessCategoryFilter,
+    });
   }
 
-  // City filter
+  // -------------------------------------------------------------------------
+  // City filter — HARD FILTER
+  // -------------------------------------------------------------------------
   if (intent.city) {
-    where.OR = [
-      { city: { contains: intent.city, mode: "insensitive" } },
-      { address: { contains: intent.city, mode: "insensitive" } },
-    ];
+    andConditions.push({
+      OR: [
+        { city: { contains: intent.city, mode: "insensitive" } },
+        { address: { contains: intent.city, mode: "insensitive" } },
+      ],
+    });
   }
 
+  // -------------------------------------------------------------------------
   // Service keyword + price filter
+  // -------------------------------------------------------------------------
   if (intent.serviceKeywords && intent.serviceKeywords.length > 0) {
-    where.services = {
-      some: {
-        isActive: true,
-        AND: [
-          {
-            OR: intent.serviceKeywords.map((keyword) => ({
-              OR: [
-                { name: { contains: keyword, mode: "insensitive" as const } },
-                {
-                  description: {
-                    contains: keyword,
-                    mode: "insensitive" as const,
+    andConditions.push({
+      services: {
+        some: {
+          isActive: true,
+          AND: [
+            {
+              OR: intent.serviceKeywords.map((keyword) => ({
+                OR: [
+                  {
+                    name: { contains: keyword, mode: "insensitive" as const },
                   },
-                },
-              ],
-            })),
-          },
-          ...(intent.maxPrice ? [{ price: { lte: intent.maxPrice } }] : []),
-        ],
+                  {
+                    description: {
+                      contains: keyword,
+                      mode: "insensitive" as const,
+                    },
+                  },
+                ],
+              })),
+            },
+            ...(intent.maxPrice ? [{ price: { lte: intent.maxPrice } }] : []),
+          ],
+        },
       },
-    };
+    });
   } else if (intent.maxPrice) {
-    where.services = {
-      some: {
-        isActive: true,
-        price: { lte: intent.maxPrice },
+    andConditions.push({
+      services: {
+        some: {
+          isActive: true,
+          price: { lte: intent.maxPrice },
+        },
       },
-    };
+    });
   }
 
-  // Search terms
-  if (intent.searchTerms && !intent.city) {
-    if (!where.OR) {
-      where.OR = [
+  // -------------------------------------------------------------------------
+  // Search terms — soft match against business name and description.
+  // Kept as a separate AND condition so it never merges with the city OR block.
+  // -------------------------------------------------------------------------
+  if (intent.searchTerms) {
+    andConditions.push({
+      OR: [
         { name: { contains: intent.searchTerms, mode: "insensitive" } },
         {
           description: {
@@ -257,32 +286,32 @@ async function executeAIQuery(intent: SearchIntent) {
             mode: "insensitive",
           },
         },
-      ];
-    }
-  } else if (intent.searchTerms && where.OR) {
-    (where.OR as Prisma.BusinessWhereInput[]).push(
-      { name: { contains: intent.searchTerms, mode: "insensitive" } },
-      {
-        description: {
-          contains: intent.searchTerms,
-          mode: "insensitive",
-        },
-      }
-    );
+      ],
+    });
   }
 
-  // Day of week filter
+  // -------------------------------------------------------------------------
+  // Day of week filter — business must be open on specified days
+  // -------------------------------------------------------------------------
   if (intent.dayOfWeek && intent.dayOfWeek.length > 0) {
-    where.BusinessHours = {
-      some: {
-        dayOfWeek: { in: intent.dayOfWeek },
-        isClosed: false,
+    andConditions.push({
+      BusinessHours: {
+        some: {
+          dayOfWeek: { in: intent.dayOfWeek },
+          isClosed: false,
+        },
       },
-    };
+    });
   }
 
-  // Fetch — always fetch with createdAt desc as the base order;
-  // post-fetch scoring reorders by relevance/rating/price
+  // Combine all conditions into a single AND
+  const where: Prisma.BusinessWhereInput = {
+    AND: andConditions,
+  };
+
+  // -------------------------------------------------------------------------
+  // Fetch — oversample for post-fetch scoring, then trim
+  // -------------------------------------------------------------------------
   const rawBusinesses = await db.business.findMany({
     where,
     include: {
@@ -307,10 +336,12 @@ async function executeAIQuery(intent: SearchIntent) {
       },
     },
     orderBy: { createdAt: "desc" },
-    take: MAX_AI_RESULTS * 3, // Fetch more than needed; scoring will trim
+    take: MAX_AI_RESULTS * 3,
   });
 
-  // Compute average rating for each business
+  // -------------------------------------------------------------------------
+  // Compute averageRating for each business
+  // -------------------------------------------------------------------------
   const withRatings: AISearchBusinessResult[] = rawBusinesses.map((b) => {
     const totalRating = b.reviews.reduce((sum, r) => sum + r.rating, 0);
     const averageRating =
@@ -338,7 +369,9 @@ async function executeAIQuery(intent: SearchIntent) {
     };
   });
 
-  // Apply minRating filter post-fetch (Prisma aggregate filter is complex)
+  // -------------------------------------------------------------------------
+  // Apply minRating filter post-fetch
+  // -------------------------------------------------------------------------
   const filtered =
     intent.minRating !== null && intent.minRating !== undefined
       ? withRatings.filter(
@@ -347,12 +380,21 @@ async function executeAIQuery(intent: SearchIntent) {
         )
       : withRatings;
 
-  // Sort by intent
+  // -------------------------------------------------------------------------
+  // Sort
+  //
+  // When city is specified and sortBy is "relevance", we apply a secondary
+  // tiebreaker: exact city column match ranks above address-only match.
+  // This ensures e.g. businesses where city="Mekelle" appear before those
+  // where only address contains "Mekelle".
+  //
+  // For "rating" and "price" sorts, the city hard filter already guarantees
+  // all results are in the correct city — no tiebreaker needed.
+  // -------------------------------------------------------------------------
   const sortBy = intent.sortBy ?? "relevance";
   let sorted: AISearchBusinessResult[];
 
   if (sortBy === "rating") {
-    // Highest average rating first; businesses with no reviews go last
     sorted = [...filtered].sort((a, b) => {
       if (a.averageRating === null && b.averageRating === null) return 0;
       if (a.averageRating === null) return 1;
@@ -360,7 +402,6 @@ async function executeAIQuery(intent: SearchIntent) {
       return b.averageRating - a.averageRating;
     });
   } else if (sortBy === "price") {
-    // Lowest minimum service price first
     sorted = [...filtered].sort((a, b) => {
       const aMin = a.matchingServices?.[0]?.price ?? Infinity;
       const bMin = b.matchingServices?.[0]?.price ?? Infinity;
@@ -372,14 +413,31 @@ async function executeAIQuery(intent: SearchIntent) {
     const maxServices = Math.max(...filtered.map((b) => b._count.services), 1);
 
     sorted = [...filtered]
-      .map((b) => ({
-        ...b,
-        relevanceScore: computeRelevanceScore(b, maxBookings, maxServices),
-      }))
+      .map((b) => {
+        const baseScore = computeRelevanceScore(b, maxBookings, maxServices);
+
+        /**
+         * City exactness tiebreaker.
+         * When the user specified a city, businesses whose `city` column
+         * exactly matches (case-insensitive) get a small bonus over those
+         * that only match via their address string.
+         *
+         * Bonus value (0.05) is intentionally small — it breaks ties without
+         * overriding meaningful rating/popularity differences.
+         */
+        const cityBonus =
+          intent.city && b.city?.toLowerCase() === intent.city.toLowerCase()
+            ? 0.05
+            : 0;
+
+        return {
+          ...b,
+          relevanceScore: baseScore + cityBonus,
+        };
+      })
       .sort((a, b) => (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0));
   }
 
-  // Trim to MAX_AI_RESULTS after sorting
   const trimmed = sorted.slice(0, MAX_AI_RESULTS);
 
   return { businesses: trimmed, totalCount: filtered.length };
