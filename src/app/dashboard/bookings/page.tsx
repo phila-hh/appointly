@@ -4,12 +4,11 @@
  *
  * Features:
  *   - Status filter (All, Pending, Confirmed, etc.)
- *   - Staff filter — filter bookings by assigned team member (Phase 15B)
+ *   - Staff filter — filter bookings by assigned team member
  *   - Assigned staff name shown on each booking card
+ *   - Returning customer badge when customer has 3+ bookings at this business
+ *   - Overdue bookings alert for past confirmed appointments
  *   - Reuses BookingList component with BUSINESS_OWNER role config
- *
- * Staff filter is only rendered when the business has at least one
- * staff member. Businesses without staff see the original UI.
  *
  * URL: /dashboard/bookings
  */
@@ -38,21 +37,16 @@ export default async function DashboardBookingsPage({
 
   const params = await searchParams;
 
-  // Fetch bookings with optional staff filter
   const bookings = await getBusinessBookings(params.status, params.staffId);
-
-  // Fetch staff for the filter dropdown
   const staff = await getBusinessStaff();
   const hasStaff = staff.length > 0;
 
-  // Serialize staff for the filter component
   const serializedStaff = staff.map((member) => ({
     id: member.id,
     name: member.name,
     title: member.title,
   }));
 
-  // Serialize bookings for client component
   const serializedBookings = bookings.map((booking) => ({
     id: booking.id,
     date: format(booking.date, "yyyy-MM-dd"),
@@ -62,12 +56,18 @@ export default async function DashboardBookingsPage({
     totalPrice: Number(booking.totalPrice),
     notes: booking.notes,
     createdAt: booking.createdAt.toISOString(),
+    // Business owners do not need these for rescheduling (only customers reschedule)
+    // but they are included for type consistency with BookingData
+    cancellationDeadline: booking.cancellationDeadline?.toISOString() ?? null,
+    rescheduleCount: booking.rescheduleCount,
     business: {
+      id: "", // not needed — business owner is viewing their own business
       name: "",
       slug: "",
       image: null,
     },
     service: {
+      id: "", // not needed — business owner does not reschedule
       name: booking.service.name,
       duration: booking.service.duration,
     },
@@ -79,6 +79,7 @@ export default async function DashboardBookingsPage({
         }
       : null,
     hasReview: false,
+    isReturningCustomer: booking.isReturningCustomer,
     customer: {
       name: booking.customer.name,
       email: booking.customer.email,
@@ -95,7 +96,6 @@ export default async function DashboardBookingsPage({
         </p>
       </div>
 
-      {/* Staff filter — only shown when business has staff members */}
       {hasStaff && (
         <StaffBookingFilter
           staffMembers={serializedStaff}

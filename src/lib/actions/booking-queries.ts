@@ -5,7 +5,7 @@
  * Provides functions for:
  *   - Fetching available time slots (single-provider and staff-aware)
  *   - Fetching a customer's booking history
- *   - Fetching business owner incoming bookings
+ *   - Fetching business owner incoming bookings with returning customer flag
  *
  * Backwards compatibility guarantee:
  *   getAvailableSlots() checks whether the business has active staff.
@@ -32,10 +32,10 @@ import {
  *   3b. HAS staff → staff-aware algorithm with per-member availability
  *
  * @param businessId - The business to check availability for
- * @param serviceId - The service being booked (determines duration + staff)
- * @param dateStr - The date in ISO string format (e.g., "2025-06-15")
- * @param staffId - Optional: specific staff member ID, or null for "any"
- * @returns Array of available TimeSlot objects (with availableStaffIds if staff-aware)
+ * @param serviceId  - The service being booked (determines duration + staff)
+ * @param dateStr    - The date in ISO string format (e.g., "2025-06-15")
+ * @param staffId    - Optional: specific staff member ID, or null for "any"
+ * @returns Array of available TimeSlot objects
  */
 export async function getAvailableSlots(
   businessId: string,
@@ -43,26 +43,19 @@ export async function getAvailableSlots(
   dateStr: string,
   staffId?: string | null
 ): Promise<TimeSlot[]> {
-  // Parse the date
   const date = new Date(dateStr);
   const dayOfWeek = getDayOfWeek(date);
 
-  // Fetch business hours for this day of the week
   const businessHours = await db.businessHours.findUnique({
     where: {
-      businessId_dayOfWeek: {
-        businessId,
-        dayOfWeek,
-      },
+      businessId_dayOfWeek: { businessId, dayOfWeek },
     },
   });
 
-  // If no hours set or business is closed, no slots available
   if (!businessHours || businessHours.isClosed) {
     return [];
   }
 
-  // Fetch the service duration
   const service = await db.service.findUnique({
     where: { id: serviceId },
     select: { duration: true },
@@ -70,14 +63,11 @@ export async function getAvailableSlots(
 
   if (!service) return [];
 
-  // Check whether the business has active staff who can perform this service
   const staffForService = await db.staff.findMany({
     where: {
       businessId,
       isActive: true,
-      services: {
-        some: { serviceId },
-      },
+      services: { some: { serviceId } },
     },
     select: { id: true },
   });
@@ -115,27 +105,17 @@ export async function getAvailableSlots(
   // -------------------------------------------------------------------------
   // Branch B: Staff configured → staff-aware algorithm
   // -------------------------------------------------------------------------
-
-  // Determine which staff members to fetch data for
   const relevantStaffIds = staffId
-    ? [staffId] // Specific staff selected — only fetch their data
-    : staffForService.map((s) => s.id); // Any available — fetch all
+    ? [staffId]
+    : staffForService.map((s) => s.id);
 
-  // Fetch hours and existing bookings for each relevant staff member
   const staffAvailability = await Promise.all(
     relevantStaffIds.map(async (sid) => {
-      // Fetch this staff member's hours for this day
       const hours = await db.staffHours.findUnique({
-        where: {
-          staffId_dayOfWeek: {
-            staffId: sid,
-            dayOfWeek,
-          },
-        },
+        where: { staffId_dayOfWeek: { staffId: sid, dayOfWeek } },
         select: { openTime: true, closeTime: true, isClosed: true },
       });
 
-      // Fetch this staff member's existing bookings for this date
       const existingBookings = await db.booking.findMany({
         where: {
           staffId: sid,
@@ -145,7 +125,6 @@ export async function getAvailableSlots(
         select: { startTime: true, endTime: true },
       });
 
-      // Fetch staff name for the input shape
       const staffMember = await db.staff.findUnique({
         where: { id: sid },
         select: { name: true },
@@ -172,7 +151,6 @@ export async function getAvailableSlots(
     date.getMonth() === today.getMonth() &&
     date.getDate() === today.getDate();
 
-  // Generate staff-aware slots
   const staffAwareSlots = generateStaffAwareSlots({
     businessOpenTime: businessHours.openTime,
     businessCloseTime: businessHours.closeTime,
@@ -182,16 +160,15 @@ export async function getAvailableSlots(
     selectedStaffId: staffId,
   });
 
-  // Return as TimeSlot[] — availableStaffIds is preserved on each slot
-  // but typed as TimeSlot for the public API surface (client components
-  // only need startTime/endTime/label; booking creation reads availableStaffIds
-  // from the slot-actions layer which preserves the full type)
   return staffAwareSlots;
 }
 
 /**
- * Fetches all the bookings for the current customer.
- * Includes related business, service, and staff information.
+ * Fetches all bookings for the current customer.
+ *
+ * Includes businessId and serviceId explicitly so they can be passed to
+ * the RescheduleDialog for slot fetching. Also includes rescheduleCount
+ * and cancellationDeadline for action button logic.
  *
  * @param status - Optional status filter
  * @returns Array of booking records with related data
@@ -213,6 +190,7 @@ export async function getCustomerBookings(status?: string) {
     include: {
       business: {
         select: {
+          id: true, // ← needed for RescheduleDialog slot fetching
           name: true,
           slug: true,
           image: true,
@@ -220,6 +198,7 @@ export async function getCustomerBookings(status?: string) {
       },
       service: {
         select: {
+          id: true, // ← needed for RescheduleDialog slot fetching
           name: true,
           duration: true,
         },
@@ -244,11 +223,14 @@ export async function getCustomerBookings(status?: string) {
 
 /**
  * Fetches all bookings for the current business owner's business.
- * Includes customer, service, and assigned staff information.
  *
- * @param status - Optional status filter
+ * Includes a returning customer flag: isReturningCustomer is true when
+ * the customer has 3 or more completed/confirmed bookings at this business.
+ * This is computed in application code to avoid a complex subquery.
+ *
+ * @param status  - Optional status filter
  * @param staffId - Optional staff member filter
- * @returns Array of booking records with related data
+ * @returns Array of booking records with related data and returning flag
  */
 export async function getBusinessBookings(status?: string, staffId?: string) {
   const user = await getCurrentUser();
@@ -269,12 +251,11 @@ export async function getBusinessBookings(status?: string, staffId?: string) {
     where.status = status;
   }
 
-  // Filter by specific staff member if provided
   if (staffId && staffId !== "ALL") {
     where.staffId = staffId;
   }
 
-  return db.booking.findMany({
+  const bookings = await db.booking.findMany({
     where,
     include: {
       customer: {
@@ -302,4 +283,35 @@ export async function getBusinessBookings(status?: string, staffId?: string) {
     },
     orderBy: { date: "desc" },
   });
+
+  if (bookings.length === 0)
+    return bookings.map((b) => ({ ...b, isReturningCustomer: false }));
+
+  // -------------------------------------------------------------------------
+  // Returning customer detection
+  // Count completed/confirmed bookings per unique customer at this business.
+  // A customer with 3+ bookings is flagged as a returning customer.
+  // We do one aggregate query per unique customer ID to avoid N+1.
+  // -------------------------------------------------------------------------
+  const uniqueCustomerIds = [...new Set(bookings.map((b) => b.customerId))];
+
+  const bookingCounts = await db.booking.groupBy({
+    by: ["customerId"],
+    where: {
+      businessId: business.id,
+      customerId: { in: uniqueCustomerIds },
+      status: { in: ["CONFIRMED", "COMPLETED"] },
+    },
+    _count: { id: true },
+  });
+
+  const countMap = new Map(
+    bookingCounts.map((bc) => [bc.customerId, bc._count.id])
+  );
+
+  return bookings.map((booking) => ({
+    ...booking,
+    /** True when the customer has 3+ confirmed/completed bookings here. */
+    isReturningCustomer: (countMap.get(booking.customerId) ?? 0) >= 3,
+  }));
 }

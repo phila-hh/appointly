@@ -28,7 +28,7 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
@@ -72,11 +72,13 @@ interface BookingData {
   cancellationDeadline: string | null;
   rescheduleCount: number;
   business: {
+    id: string;
     name: string;
     slug: string;
     image: string | null;
   };
   service: {
+    id: string;
     name: string;
     duration: number;
   };
@@ -123,7 +125,6 @@ export function BookingList({ bookings, userRole }: BookingListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
 
   // ---- Cancel dialog state ----
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -794,8 +795,8 @@ export function BookingList({ bookings, userRole }: BookingListProps) {
           }}
           booking={{
             id: bookingToReschedule.id,
-            businessId: bookingToReschedule.business.slug, // resolved in action
-            serviceId: bookingToReschedule.service.name, // resolved in action
+            businessId: bookingToReschedule.business.id,
+            serviceId: bookingToReschedule.service.id,
             staffId: bookingToReschedule.staff?.id ?? null,
             currentDate: bookingToReschedule.date,
             currentStartTime: bookingToReschedule.startTime,

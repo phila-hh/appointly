@@ -27,7 +27,7 @@ import { CalendarIcon, Clock, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { rescheduleBooking } from "@/lib/actions/booking";
-import { getAvailableSlots } from "@/lib/actions/booking-queries";
+import { fetchAvailableSlots } from "@/lib/actions/slot-actions";
 import { formatTime24to12 } from "@/constants/time";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -144,7 +144,7 @@ export function RescheduleDialog({
 
     try {
       const dateStr = format(date, "yyyy-MM-dd");
-      const slots = await getAvailableSlots(
+      const slots = await fetchAvailableSlots(
         booking.businessId,
         booking.serviceId,
         dateStr,

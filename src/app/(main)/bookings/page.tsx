@@ -1,6 +1,6 @@
 /**
  * @file Customer Bookings Page
- * @description Show's the customers booking history with status filters.
+ * @description Shows the customer's booking history with status filters.
  *
  * URL: /bookings
  */
@@ -28,7 +28,8 @@ export default async function BookingPage({ searchParams }: BookingPageProps) {
   const params = await searchParams;
   const bookings = await getCustomerBookings(params.status);
 
-  // Serialize bookings for client component
+  // Serialize bookings for client component.
+  // businessId and serviceId are included so RescheduleDialog can fetch slots.
   const serializedBookings = bookings.map((booking) => ({
     id: booking.id,
     date: format(booking.date, "yyyy-MM-dd"),
@@ -38,8 +39,26 @@ export default async function BookingPage({ searchParams }: BookingPageProps) {
     totalPrice: Number(booking.totalPrice),
     notes: booking.notes,
     createdAt: booking.createdAt.toISOString(),
-    business: booking.business,
-    service: booking.service,
+    cancellationDeadline: booking.cancellationDeadline?.toISOString() ?? null,
+    rescheduleCount: booking.rescheduleCount,
+    business: {
+      id: booking.business.id, // ← needed by RescheduleDialog
+      name: booking.business.name,
+      slug: booking.business.slug,
+      image: booking.business.image,
+    },
+    service: {
+      id: booking.service.id, // ← needed by RescheduleDialog
+      name: booking.service.name,
+      duration: booking.service.duration,
+    },
+    staff: booking.staff
+      ? {
+          id: booking.staff.id,
+          name: booking.staff.name,
+          title: booking.staff.title,
+        }
+      : null,
     hasReview: !!booking.review,
     isPaid: booking.payment?.status === "SUCCEEDED",
   }));
