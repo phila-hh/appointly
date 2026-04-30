@@ -6,6 +6,10 @@
  * The `recipientType` prop controls the message variant:
  *   - "customer" → cancellation from their perspective
  *   - "business" → cancellation notification for the owner
+ *
+ * When a business owner cancels a confirmed booking, the mandatory
+ * cancellationReason is displayed in the customer-facing email so the
+ * customer understands why their paid appointment was cancelled.
  */
 
 import {
@@ -22,6 +26,10 @@ import {
 } from "@react-email/components";
 import { render } from "@react-email/components";
 
+// =============================================================================
+// Types
+// =============================================================================
+
 export interface BookingCancelledEmailProps {
   recipientName: string;
   recipientType: "customer" | "business";
@@ -33,7 +41,18 @@ export interface BookingCancelledEmailProps {
   bookingId: string;
   ctaUrl: string;
   cancelledBy: "customer" | "business";
+  /**
+   * The reason provided by the business owner when cancelling a confirmed
+   * booking. Only populated when cancelledBy === "business". Displayed
+   * in the customer email so they understand why their appointment was
+   * cancelled. Not shown in the business-facing variant.
+   */
+  cancellationReason?: string;
 }
+
+// =============================================================================
+// Template
+// =============================================================================
 
 export function BookingCancelledEmail({
   recipientName,
@@ -46,6 +65,7 @@ export function BookingCancelledEmail({
   bookingId,
   ctaUrl,
   cancelledBy,
+  cancellationReason,
 }: BookingCancelledEmailProps) {
   const isCustomer = recipientType === "customer";
 
@@ -53,6 +73,15 @@ export function BookingCancelledEmail({
     cancelledBy === "customer" ? "the customer" : "the business";
 
   const ctaLabel = isCustomer ? "Browse Services" : "View Dashboard";
+
+  /**
+   * Show the cancellation reason box when:
+   *   - The recipient is the customer (not the business view)
+   *   - The business cancelled (not the customer themselves)
+   *   - A reason was actually provided
+   */
+  const showReason =
+    isCustomer && cancelledBy === "business" && !!cancellationReason;
 
   return (
     <Html>
@@ -108,11 +137,21 @@ export function BookingCancelledEmail({
             </Row>
           </Section>
 
+          {/* Cancellation reason — shown to customer when business cancels */}
+          {showReason && (
+            <Section style={reasonSection}>
+              <Text style={reasonLabel}>Reason for Cancellation</Text>
+              <Text style={reasonText}>&ldquo;{cancellationReason}&rdquo;</Text>
+            </Section>
+          )}
+
           {/* Message */}
           <Section style={messageSection}>
             <Text style={messageText}>
               {isCustomer
-                ? "We're sorry about the cancellation. You can browse other available services and book a new appointment at any time."
+                ? cancelledBy === "business"
+                  ? "We're sorry for the inconvenience. If you paid for this booking, a full refund will be processed within 3–5 business days. You can browse other available services and book a new appointment at any time."
+                  : "We're sorry about the cancellation. You can browse other available services and book a new appointment at any time."
                 : "The time slot is now available for new bookings."}
             </Text>
           </Section>
@@ -150,7 +189,10 @@ export async function renderBookingCancelledEmail(
   return render(<BookingCancelledEmail {...props} />);
 }
 
+// =============================================================================
 // Styles
+// =============================================================================
+
 const body: React.CSSProperties = {
   backgroundColor: "#f6f9fc",
   fontFamily:
@@ -181,7 +223,10 @@ const heroSection: React.CSSProperties = {
   padding: "40px 32px 24px",
   textAlign: "center" as const,
 };
-const heroEmoji: React.CSSProperties = { fontSize: "48px", margin: "0 0 8px" };
+const heroEmoji: React.CSSProperties = {
+  fontSize: "48px",
+  margin: "0 0 8px",
+};
 const heroHeading: React.CSSProperties = {
   fontSize: "28px",
   fontWeight: "bold",
@@ -210,7 +255,9 @@ const cardTitle: React.CSSProperties = {
   marginBottom: "16px",
   marginTop: 0,
 };
-const detailRow: React.CSSProperties = { padding: "8px 0" };
+const detailRow: React.CSSProperties = {
+  padding: "8px 0",
+};
 const detailLabel: React.CSSProperties = {
   fontSize: "14px",
   color: "#6b7280",
@@ -225,7 +272,34 @@ const detailDivider: React.CSSProperties = {
   borderColor: "#e5e7eb",
   margin: "4px 0",
 };
-const messageSection: React.CSSProperties = { padding: "24px 32px 0" };
+
+/** Reason box — amber background, sits between the details card and the message */
+const reasonSection: React.CSSProperties = {
+  margin: "16px 32px 0",
+  padding: "16px",
+  backgroundColor: "#fffbeb",
+  borderRadius: "8px",
+  border: "1px solid #fde68a",
+};
+const reasonLabel: React.CSSProperties = {
+  fontSize: "12px",
+  fontWeight: "600",
+  color: "#92400e",
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.05em",
+  margin: "0 0 8px",
+};
+const reasonText: React.CSSProperties = {
+  fontSize: "14px",
+  color: "#374151",
+  lineHeight: "22px",
+  margin: 0,
+  fontStyle: "italic",
+};
+
+const messageSection: React.CSSProperties = {
+  padding: "24px 32px 0",
+};
 const messageText: React.CSSProperties = {
   fontSize: "15px",
   color: "#374151",
