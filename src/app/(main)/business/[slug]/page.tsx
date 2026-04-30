@@ -1,16 +1,17 @@
 /**
  * @file Business Detail Page
  * @description Public-facing business profile page with services, team,
- * reviews, and AI chatbot.
+ * reviews, announcements, and AI chatbot.
  *
  * Features:
+ *   - Business announcement banner (if active and not expired)
  *   - Business information (name, description, contact, hours)
  *   - Average rating and review count
  *   - List of active services with "Book Now" buttons
- *   - Team tab showing staff members (Phase 15B) — only if staff exist
+ *   - Team tab showing staff members — only if staff exist
  *   - Customer reviews with filtering and sentiment badges
+ *   - Business reply displayed below each review
  *   - Favorite button for customers
- *   - "Book with [Name]" deep-link per staff member
  *   - AI chatbot widget — floating button + panel
  *
  * URL: /business/[slug]
@@ -37,6 +38,7 @@ import { FavoriteButton } from "@/components/shared/favorite-button";
 import { StarRating } from "@/components/shared/star-rating";
 import { ReviewList } from "@/components/shared/review-list";
 import { ChatWidget } from "@/components/shared/chat-widget";
+import { BusinessAnnouncement } from "@/components/shared/business-announcement";
 import { formatPrice, formatDuration } from "@/lib/utils";
 
 interface BusinessPageProps {
@@ -51,9 +53,7 @@ export async function generateMetadata({ params }: BusinessPageProps) {
     select: { name: true, description: true },
   });
 
-  if (!business) {
-    return { title: "Business Not Found" };
-  }
+  if (!business) return { title: "Business Not Found" };
 
   return {
     title: business.name,
@@ -64,10 +64,8 @@ export async function generateMetadata({ params }: BusinessPageProps) {
 
 export default async function BusinessPage({ params }: BusinessPageProps) {
   const { slug } = await params;
-
   const user = await getCurrentUser();
 
-  // Fetch business with all data
   const business = await db.business.findUnique({
     where: { slug, isActive: true },
     include: {
@@ -83,7 +81,6 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
 
   if (!business) notFound();
 
-  // Fetch review stats, reviews, favorites, and public staff in parallel
   const [reviewStats, reviewsData, favorited, staffMembers] = await Promise.all(
     [
       getReviewStats(business.id),
@@ -97,10 +94,8 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
     ]
   );
 
-  /** Whether this business has any active staff members. */
   const hasStaff = staffMembers.length > 0;
 
-  // Build business address
   const address = [
     business.address,
     business.city,
@@ -109,6 +104,19 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
   ]
     .filter(Boolean)
     .join(", ");
+
+  /**
+   * Determine whether the announcement should be displayed.
+   * An announcement is visible when:
+   *   - The text is non-null and non-empty
+   *   - The expiry date is null (permanent) OR in the future
+   */
+  const now = new Date();
+  const showAnnouncement =
+    !!business.announcement &&
+    business.announcement.trim() !== "" &&
+    (business.announcementExpiresAt === null ||
+      business.announcementExpiresAt > now);
 
   return (
     <div className="container mx-auto px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
@@ -134,7 +142,6 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
               )}
             </div>
 
-            {/* Favorite button */}
             {user && user.role === "CUSTOMER" && (
               <FavoriteButton
                 businessId={business.id}
@@ -146,11 +153,19 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
           {business.description && (
             <p className="text-muted-foreground">{business.description}</p>
           )}
+
+          {/* Announcement banner — shown below description, above main content */}
+          {showAnnouncement && (
+            <BusinessAnnouncement
+              announcement={business.announcement!}
+              expiresAt={business.announcementExpiresAt}
+            />
+          )}
         </div>
 
         {/* Main content — two columns */}
         <div className="grid gap-8 lg:grid-cols-3">
-          {/* Left column: Services, Team (if applicable), and Reviews */}
+          {/* Left column: Services, Team, Reviews */}
           <div className="space-y-8 lg:col-span-2">
             <Tabs defaultValue="services">
               <TabsList
@@ -213,7 +228,7 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
                 )}
               </TabsContent>
 
-              {/* Team tab — only rendered when business has staff */}
+              {/* Team tab */}
               {hasStaff && (
                 <TabsContent value="team" className="mt-6 space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -230,7 +245,7 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
                                   </p>
                                 )}
                               </div>
-                              <UserCog className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
+                              <UserCog className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                             </div>
 
                             {member.services.length > 0 && (
@@ -278,6 +293,11 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
 
               {/* Reviews tab */}
               <TabsContent value="reviews" className="mt-6">
+                {/*
+                  businessName intentionally NOT passed here.
+                  Public view: shows reply text but not the edit form.
+                  Dashboard view (dashboard/reviews/page.tsx): passes businessName.
+                */}
                 <ReviewList
                   reviews={reviewsData.reviews.map((review) => ({
                     ...review,
@@ -289,9 +309,8 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
             </Tabs>
           </div>
 
-          {/* Right column: Business info */}
+          {/* Right column: Contact + Hours */}
           <div className="space-y-6">
-            {/* Contact info */}
             <Card>
               <CardHeader>
                 <CardTitle>Contact Information</CardTitle>
@@ -354,7 +373,6 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
               </CardContent>
             </Card>
 
-            {/* Business hours */}
             {business.BusinessHours.length > 0 && (
               <Card>
                 <CardHeader>
@@ -385,7 +403,7 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
         </div>
       </div>
 
-      {/* AI Chatbot Widget — Phase 16C */}
+      {/* AI Chatbot Widget */}
       <ChatWidget
         businessContext={{
           businessId: business.id,
