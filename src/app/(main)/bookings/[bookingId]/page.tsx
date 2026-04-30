@@ -140,7 +140,9 @@ export default async function BookingDetailPage({
       <div className="mx-auto max-w-4xl space-y-6">
         {/* Back button */}
         <Button variant="ghost" size="sm" asChild>
-          <Link href={isOwner && !isCustomer ? "/dashboard/bookings" : "/bookings"}>
+          <Link
+            href={isOwner && !isCustomer ? "/dashboard/bookings" : "/bookings"}
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Bookings
           </Link>
@@ -525,7 +527,8 @@ export default async function BookingDetailPage({
                           >
                             {booking.payment.refundStatus === "REFUNDED"
                               ? "Refunded"
-                              : booking.payment.refundStatus === "PENDING_REFUND"
+                              : booking.payment.refundStatus ===
+                                  "PENDING_REFUND"
                                 ? "Processing..."
                                 : booking.payment.refundStatus}
                           </span>
