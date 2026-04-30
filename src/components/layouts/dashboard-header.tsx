@@ -5,6 +5,9 @@
  * On large screens (lg+) the sidebar is visible and this header provides
  * only a minimal top bar. On smaller screens, it includes sheet-based
  * mobile navigation menu.
+ *
+ * Receives unreadCount and notifications as props from the server layout
+ * and renders the NotificationBell client component.
  */
 
 "use client";
@@ -17,6 +20,7 @@ import { Menu, CalendarCheck, LogOut } from "lucide-react";
 
 import { SITE_CONFIG, DASHBOARD_NAV_LINKS } from "@/constants";
 import { cn } from "@/lib/utils";
+import type { SerializedNotification } from "@/lib/actions/notification-queries";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -27,6 +31,7 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { NotificationBell } from "@/components/shared/notification-bell";
 
 /** Props accepted by the DashboardHeader component. */
 interface DashboardHeaderProps {
@@ -34,23 +39,27 @@ interface DashboardHeaderProps {
     name?: string | null;
     email?: string | null;
   };
+  /** Unread notification count — fetched server-side in dashboard layout. */
+  unreadCount: number;
+  /** Recent notifications — fetched server-side in dashboard layout. */
+  notifications: SerializedNotification[];
 }
 
-export function DashboardHeader({ user }: DashboardHeaderProps) {
+export function DashboardHeader({
+  user,
+  unreadCount,
+  notifications,
+}: DashboardHeaderProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  /**
-   * Determine the current page title from the pathname.
-   * Matches against dashboard nav links to find the label.
-   */
   const currentPage = DASHBOARD_NAV_LINKS.find(
     (link) => link.href === pathname
   );
 
   return (
     <header className="flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6 lg:px-8">
-      {/* Mobile menu trigger — hidden on lg screens (sidebar is visible) */}
+      {/* Mobile menu trigger — hidden on lg screens */}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="lg:hidden">
@@ -94,7 +103,6 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             </nav>
           </ScrollArea>
 
-          {/* Bottom section */}
           <div className="absolute bottom-0 left-0 right-0 border-t p-4">
             <div className="mb-3 px-2">
               <p className="truncate text-sm font-medium">{user.name}</p>
@@ -126,10 +134,16 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
         </h1>
       </div>
 
-      {/* Right side — back to main site link */}
-      <Button variant="ghost" size="sm" asChild>
-        <Link href="/">← Back to site</Link>
-      </Button>
+      {/* Right section: notification bell + back to site */}
+      <div className="flex items-center gap-2">
+        <NotificationBell
+          unreadCount={unreadCount}
+          notifications={notifications}
+        />
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/">← Back to site</Link>
+        </Button>
+      </div>
     </header>
   );
 }

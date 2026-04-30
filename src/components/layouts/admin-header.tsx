@@ -1,3 +1,11 @@
+/**
+ * @file Admin Header
+ * @description Top header bar for the admin panel.
+ *
+ * Receives unreadCount and notifications as props from the server layout
+ * and renders the NotificationBell client component.
+ */
+
 "use client";
 
 import { useState } from "react";
@@ -8,6 +16,7 @@ import { Menu, Shield, LogOut } from "lucide-react";
 
 import { ADMIN_NAV_LINKS, SITE_CONFIG } from "@/constants";
 import { cn } from "@/lib/utils";
+import type { SerializedNotification } from "@/lib/actions/notification-queries";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -18,15 +27,24 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { NotificationBell } from "@/components/shared/notification-bell";
 
 interface AdminHeaderProps {
   user: {
     name?: string | null;
     email?: string | null;
   };
+  /** Unread notification count — fetched server-side in admin layout. */
+  unreadCount: number;
+  /** Recent notifications — fetched server-side in admin layout. */
+  notifications: SerializedNotification[];
 }
 
-export function AdminHeader({ user }: AdminHeaderProps) {
+export function AdminHeader({
+  user,
+  unreadCount,
+  notifications,
+}: AdminHeaderProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -116,9 +134,16 @@ export function AdminHeader({ user }: AdminHeaderProps) {
         </div>
       </div>
 
-      <Button variant="ghost" size="sm" asChild>
-        <Link href="/">Back to site</Link>
-      </Button>
+      {/* Right section: notification bell + back to site */}
+      <div className="flex items-center gap-2">
+        <NotificationBell
+          unreadCount={unreadCount}
+          notifications={notifications}
+        />
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/">Back to site</Link>
+        </Button>
+      </div>
     </header>
   );
 }
