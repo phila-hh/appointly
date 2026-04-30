@@ -1,17 +1,19 @@
 /**
  * @file Review Card Component
  * @description Displays a single review with customer info, rating, comment,
- * and AI-generated sentiment badge.
+ * AI-generated sentiment badge, and business reply.
  *
  * Features:
  *   - Customer name and avatar
  *   - Star rating display
  *   - Review date
  *   - Review comment
- *   - AI sentiment badge (positive/neutral/negative) with confidence
+ *   - AI sentiment badge (positive/neutral/negative) with confidence tooltip
  *   - Service name (which service was reviewed)
  *   - Verified booking badge
- *   - Edit/delete buttons for own reviews
+ *   - Edit/delete buttons for customer's own reviews (via dropdown)
+ *   - Business reply display — shown publicly when businessReply is set
+ *   - ReviewReplyForm — shown to business owners in dashboard view
  */
 
 import { format } from "date-fns";
@@ -23,10 +25,12 @@ import {
   ThumbsUp,
   Minus,
   ThumbsDown,
+  MessageSquare,
 } from "lucide-react";
 
 import { StarRating } from "@/components/shared/star-rating";
 import { UserAvatar } from "@/components/shared/user-avatar";
+import { ReviewReplyForm } from "@/components/shared/review-reply-form";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -43,6 +47,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+// =============================================================================
+// Types
+// =============================================================================
+
 interface ReviewCardProps {
   review: {
     id: string;
@@ -51,6 +59,10 @@ interface ReviewCardProps {
     sentimentLabel?: string | null;
     sentimentScore?: number | null;
     createdAt: Date;
+    /** Business owner's public response to this review. */
+    businessReply?: string | null;
+    /** When the reply was posted or last edited. */
+    businessReplyAt?: Date | null;
     customer: {
       name: string | null;
       image: string | null;
@@ -61,26 +73,27 @@ interface ReviewCardProps {
       };
     };
   };
-  /** Whether to show action buttons (edit/delete) */
+  /** Whether to show customer edit/delete action buttons. */
   showActions?: boolean;
-  /** Callbacks for actions */
   onEdit?: (reviewId: string) => void;
   onDelete?: (reviewId: string) => void;
-  /** Whether to show the service name */
+  /** Whether to show the service name above the comment. */
   showService?: boolean;
+  /**
+   * When provided, renders the ReviewReplyForm below the review comment.
+   * Only pass this on the dashboard reviews page (business owner view).
+   * Do NOT pass it on the public business page.
+   */
+  businessName?: string;
 }
 
-/**
- * Configuration for sentiment badge display.
- * Maps sentiment labels to their visual representation.
- */
+// =============================================================================
+// Sentiment badge config
+// =============================================================================
+
 const SENTIMENT_CONFIG: Record<
   string,
-  {
-    label: string;
-    className: string;
-    icon: typeof ThumbsUp;
-  }
+  { label: string; className: string; icon: typeof ThumbsUp }
 > = {
   positive: {
     label: "Positive",
@@ -102,25 +115,36 @@ const SENTIMENT_CONFIG: Record<
   },
 };
 
+// =============================================================================
+// Component
+// =============================================================================
+
 export function ReviewCard({
   review,
   showActions = false,
   onEdit,
   onDelete,
   showService = false,
+  businessName,
 }: ReviewCardProps) {
-  // Get sentiment config (if sentiment data exists)
   const sentimentConfig = review.sentimentLabel
     ? SENTIMENT_CONFIG[review.sentimentLabel]
     : null;
 
   const SentimentIcon = sentimentConfig?.icon;
 
+  /**
+   * The reply form is shown when businessName is passed (dashboard view).
+   * The reply display is shown on both views when businessReply is set.
+   */
+  const showReplyForm = !!businessName;
+  const showPublicReply = !showReplyForm && !!review.businessReply;
+
   return (
     <Card>
       <CardContent className="p-6">
         <div className="space-y-4">
-          {/* Header: Avatar, name, rating, date, sentiment */}
+          {/* Header: avatar, name, rating, date, sentiment, actions */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
               <UserAvatar
@@ -177,7 +201,7 @@ export function ReviewCard({
                 </TooltipProvider>
               )}
 
-              {/* Action menu */}
+              {/* Customer action menu (edit/delete own review) */}
               {showActions && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -222,6 +246,40 @@ export function ReviewCard({
           {/* Review comment */}
           {review.comment && (
             <p className="text-sm leading-relaxed">{review.comment}</p>
+          )}
+
+          {/* ---------------------------------------------------------------- */}
+          {/* Public reply display — shown on business page when reply exists  */}
+          {/* Not shown in dashboard view (ReplyForm handles that display)     */}
+          {/* ---------------------------------------------------------------- */}
+          {showPublicReply && (
+            <div className="rounded-lg border bg-muted/40 p-3">
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-xs font-medium text-muted-foreground">
+                  Response from the business
+                  {review.businessReplyAt && (
+                    <span className="ml-1 font-normal">
+                      · {format(review.businessReplyAt, "MMM d, yyyy")}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <p className="text-sm">{review.businessReply}</p>
+            </div>
+          )}
+
+          {/* ---------------------------------------------------------------- */}
+          {/* Dashboard reply form — shown only in business owner view         */}
+          {/* Handles both compose (no reply) and edit (reply exists) modes    */}
+          {/* ---------------------------------------------------------------- */}
+          {showReplyForm && (
+            <ReviewReplyForm
+              reviewId={review.id}
+              existingReply={review.businessReply ?? null}
+              existingReplyAt={review.businessReplyAt ?? null}
+              businessName={businessName}
+            />
           )}
         </div>
       </CardContent>

@@ -4,11 +4,10 @@
  *
  * Features:
  *   - Review statistics (average rating, distribution)
- *   - AI sentiment analysis summary (Phase 16A)
- *   - List of all reviews with filtering by rating and sentiment
- *   - Sort by date or rating
+ *   - AI sentiment analysis summary
+ *   - List of all reviews with sentiment badges
+ *   - Inline reply form on each review card (post / edit / remove)
  *   - Shows which service was reviewed
- *   - Sentiment badges on each review card
  *
  * URL: /dashboard/reviews
  */
@@ -28,7 +27,6 @@ export const metadata = {
 export default async function DashboardReviewsPage() {
   const business = await requireBusiness();
 
-  // Fetch reviews and stats (including sentiment distribution)
   const [reviewsData, stats] = await Promise.all([
     getBusinessReviews(business.id, { page: 1, limit: 50, sortBy: "newest" }),
     getReviewStats(business.id),
@@ -36,25 +34,29 @@ export default async function DashboardReviewsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Customer Reviews</h2>
         <p className="text-muted-foreground">
-          See what your customers are saying about your services. AI sentiment
-          analysis runs automatically on new reviews.
+          See what your customers are saying about your services. Reply to
+          reviews to show you value their feedback. AI sentiment analysis runs
+          automatically on new reviews.
         </p>
       </div>
 
-      {/* Review statistics with sentiment summary */}
       <ReviewStatistics stats={stats} />
 
-      {/* Reviews list with sentiment badges and filters */}
+      {/*
+        Pass businessName so ReviewCard renders the inline reply form.
+        This prop is intentionally NOT passed on the public business page —
+        customers should see replies but not the edit form.
+      */}
       <ReviewList
         reviews={reviewsData.reviews.map((review) => ({
           ...review,
           createdAt: review.createdAt,
         }))}
         showService
+        businessName={business.name}
       />
     </div>
   );
