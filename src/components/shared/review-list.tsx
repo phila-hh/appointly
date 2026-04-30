@@ -8,6 +8,7 @@
  *   - Filter by sentiment (positive, neutral, negative)
  *   - Pagination
  *   - Empty state
+ *   - Inline business reply form (dashboard view only — pass businessName)
  */
 
 "use client";
@@ -26,6 +27,10 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+// =============================================================================
+// Types
+// =============================================================================
+
 interface Review {
   id: string;
   rating: number;
@@ -33,6 +38,10 @@ interface Review {
   sentimentLabel?: string | null;
   sentimentScore?: number | null;
   createdAt: Date;
+  /** Business owner's public response to this review. */
+  businessReply?: string | null;
+  /** When the reply was posted or last edited. */
+  businessReplyAt?: Date | null;
   customer: {
     name: string | null;
     image: string | null;
@@ -46,14 +55,25 @@ interface Review {
 
 interface ReviewListProps {
   reviews: Review[];
-  /** Whether to show action buttons on reviews */
+  /** Whether to show customer edit/delete action buttons. */
   showActions?: boolean;
-  /** Action callbacks */
+  /** Action callbacks for customer edit/delete. */
   onEdit?: (reviewId: string) => void;
   onDelete?: (reviewId: string) => void;
-  /** Whether to show service names */
+  /** Whether to show the service name above each review comment. */
   showService?: boolean;
+  /**
+   * When provided, renders the inline reply form on each review card.
+   * Pass this ONLY in the dashboard reviews page (business owner view).
+   * Do NOT pass it on the public business page — customers see replies
+   * but not the compose form.
+   */
+  businessName?: string;
 }
+
+// =============================================================================
+// Constants
+// =============================================================================
 
 const RATING_FILTERS = [
   { value: "all", label: "All Ratings" },
@@ -71,12 +91,17 @@ const SENTIMENT_FILTERS = [
   { value: "negative", label: "Negative", icon: ThumbsDown },
 ];
 
+// =============================================================================
+// Component
+// =============================================================================
+
 export function ReviewList({
   reviews,
   showActions = false,
   onEdit,
   onDelete,
   showService = false,
+  businessName,
 }: ReviewListProps) {
   const [sortBy, setSortBy] = useState<
     "newest" | "oldest" | "highest" | "lowest"
@@ -115,14 +140,17 @@ export function ReviewList({
     }
   });
 
-  /** Whether any filter is active. */
+  /** Whether any filter is currently active. */
   const hasActiveFilter = ratingFilter !== "all" || sentimentFilter !== "all";
 
-  /** Clear all filters. */
   function clearFilters() {
     setRatingFilter("all");
     setSentimentFilter("all");
   }
+
+  // ==========================================================================
+  // Empty state
+  // ==========================================================================
 
   if (reviews.length === 0) {
     return (
@@ -136,12 +164,16 @@ export function ReviewList({
     );
   }
 
+  // ==========================================================================
+  // Render
+  // ==========================================================================
+
   return (
     <div className="space-y-6">
       {/* Filters and sorting */}
       <div className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          {/* Rating filter */}
+          {/* Rating filter tabs */}
           <Tabs
             value={ratingFilter}
             onValueChange={setRatingFilter}
@@ -179,7 +211,7 @@ export function ReviewList({
           </Select>
         </div>
 
-        {/* Sentiment filter — only shown if reviews have sentiment data */}
+        {/* Sentiment filter — only shown when at least one review has sentiment data */}
         {hasSentimentData && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Sentiment:</span>
@@ -212,7 +244,7 @@ export function ReviewList({
         {reviews.length !== 1 ? "s" : ""}
       </p>
 
-      {/* Reviews list */}
+      {/* Reviews */}
       {sortedReviews.length > 0 ? (
         <div className="space-y-4">
           {sortedReviews.map((review) => (
@@ -223,10 +255,15 @@ export function ReviewList({
               onEdit={onEdit}
               onDelete={onDelete}
               showService={showService}
+              // Forward businessName to ReviewCard.
+              // When present: renders ReviewReplyForm (dashboard view).
+              // When absent:  renders public reply display only (public page).
+              businessName={businessName}
             />
           ))}
         </div>
       ) : (
+        /* No results after filtering */
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center">
           <p className="text-sm text-muted-foreground">
             No reviews match the selected filters.
